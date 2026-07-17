@@ -30,7 +30,7 @@
 </template>
 
 <script setup lang="ts">
-const api = (window as any).electronAPI
+const api = window.electronAPI
 
 function minimize() { api?.minimize() }
 function maximize() { api?.maximize() }

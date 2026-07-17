@@ -4,7 +4,7 @@
       v-for="session in sessions"
       :key="session.id"
       :session="session"
-      :isActive="session.id === currentId"
+      :isActive="session.id === currentSessionId"
       @select="$emit('select', session.id)"
       @delete="$emit('delete', session.id)"
     />
@@ -23,7 +23,7 @@ import SessionItem from './SessionItem.vue'
 
 defineProps<{
   sessions: Session[]
-  currentId: string | null
+  currentSessionId: string | null
 }>()
 
 defineEmits<{

@@ -5,3 +5,15 @@ declare module '*.vue' {
   const component: DefineComponent<{}, {}, any>
   export default component
 }
+
+declare global {
+  interface ElectronAPI {
+    minimize: () => void
+    maximize: () => void
+    close: () => void
+  }
+
+  interface Window {
+    electronAPI: ElectronAPI
+  }
+}

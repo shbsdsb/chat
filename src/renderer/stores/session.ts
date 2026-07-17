@@ -4,10 +4,10 @@ import type { Session } from '@/types'
 
 export const useSessionStore = defineStore('session', () => {
   const sessions = ref<Session[]>([])
-  const currentId = ref<string | null>(null)
+  const currentSessionId = ref<string | null>(null)
 
   const currentSession = computed(() =>
-    sessions.value.find((s) => s.id === currentId.value) ?? null,
+    sessions.value.find((s) => s.id === currentSessionId.value) ?? null,
   )
 
   function createSession(): string {
@@ -18,13 +18,15 @@ export const useSessionStore = defineStore('session', () => {
       createdAt: Date.now(),
     }
     sessions.value.unshift(session)
-    currentId.value = id
+    currentSessionId.value = id
     return id
   }
 
   function switchSession(id: string): void {
     if (sessions.value.some((s) => s.id === id)) {
-      currentId.value = id
+      currentSessionId.value = id
+    } else {
+      console.warn(`[useSessionStore] switchSession: unknown session id "${id}"`)
     }
   }
 
@@ -34,14 +36,14 @@ export const useSessionStore = defineStore('session', () => {
 
     sessions.value.splice(idx, 1)
 
-    if (currentId.value === id) {
+    if (currentSessionId.value === id) {
       if (sessions.value.length > 0) {
-        currentId.value = sessions.value[Math.min(idx, sessions.value.length - 1)].id
+        currentSessionId.value = sessions.value[Math.min(idx, sessions.value.length - 1)].id
       } else {
-        currentId.value = null
+        currentSessionId.value = null
       }
     }
   }
 
-  return { sessions, currentId, currentSession, createSession, switchSession, deleteSession }
+  return { sessions, currentSessionId, currentSession, createSession, switchSession, deleteSession }
 })

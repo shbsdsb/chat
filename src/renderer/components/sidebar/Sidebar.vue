@@ -16,7 +16,7 @@
     </div>
     <SessionList
       :sessions="store.sessions"
-      :currentId="store.currentId"
+      :currentSessionId="store.currentSessionId"
       @select="store.switchSession"
       @delete="store.deleteSession"
     />

@@ -1,9 +1,10 @@
 import { defineStore } from 'pinia'
 import { ref } from 'vue'
+import type { AppState } from '@/types'
 
 export const useAppStore = defineStore('app', () => {
-  const sidebarCollapsed = ref(false)
-  const theme = ref<'dark' | 'light'>('light')
+  const sidebarCollapsed = ref<AppState['sidebarCollapsed']>(false)
+  const theme = ref<AppState['theme']>('light')
 
   function toggleSidebar(): void {
     sidebarCollapsed.value = !sidebarCollapsed.value

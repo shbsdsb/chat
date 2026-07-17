@@ -2,6 +2,21 @@ import { app, BrowserWindow, shell, ipcMain } from 'electron'
 import { join } from 'path'
 import { is } from '@electron-toolkit/utils'
 
+function registerWindowIPC(): void {
+  ipcMain.on('window:minimize', (event) => {
+    BrowserWindow.fromWebContents(event.sender)?.minimize()
+  })
+  ipcMain.on('window:maximize', (event) => {
+    const win = BrowserWindow.fromWebContents(event.sender)
+    if (win) {
+      win.isMaximized() ? win.unmaximize() : win.maximize()
+    }
+  })
+  ipcMain.on('window:close', (event) => {
+    BrowserWindow.fromWebContents(event.sender)?.close()
+  })
+}
+
 function createWindow(): void {
   const mainWindow = new BrowserWindow({
     width: 1100,
@@ -15,16 +30,6 @@ function createWindow(): void {
       sandbox: false,
     },
   })
-
-  ipcMain.on('window:minimize', () => mainWindow.minimize())
-  ipcMain.on('window:maximize', () => {
-    if (mainWindow.isMaximized()) {
-      mainWindow.unmaximize()
-    } else {
-      mainWindow.maximize()
-    }
-  })
-  ipcMain.on('window:close', () => mainWindow.close())
 
   mainWindow.on('ready-to-show', () => {
     mainWindow.show()
@@ -43,6 +48,7 @@ function createWindow(): void {
 }
 
 app.whenReady().then(() => {
+  registerWindowIPC()
   createWindow()
 
   app.on('activate', () => {
