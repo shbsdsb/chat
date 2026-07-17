@@ -1,0 +1,10 @@
+appId: com.aichat.desktop
+productName: AI Chat
+directories:
+  output: dist
+win:
+  target: nsis
+  icon: null
+nsis:
+  oneClick: false
+  allowToChangeInstallationDirectory: true
