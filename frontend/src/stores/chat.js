@@ -75,6 +75,7 @@ export const useChatStore = defineStore("chat", {
         id: "temp-" + (Date.now() + 1),
         role: "assistant",
         content: "",
+        reasoning_content: "",
         created_at: new Date().toISOString(),
       };
       this.messages.push(assistantMsg);
@@ -87,6 +88,12 @@ export const useChatStore = defineStore("chat", {
           if (chunk.stopped) {
             this.isStreaming = false;
             return;
+          }
+          if (chunk.reasoning_delta) {
+            const last = this.messages[this.messages.length - 1];
+            if (last && last.role === "assistant") {
+              last.reasoning_content += chunk.reasoning_delta;
+            }
           }
           if (chunk.delta) {
             const last = this.messages[this.messages.length - 1];
@@ -139,6 +146,7 @@ export const useChatStore = defineStore("chat", {
 
       this.isStreaming = true;
       const newContent = { value: "" };
+      const newReasoning = { value: "" };
 
       const es = sse(`/conversations/${this.activeConvId}/regenerate`, {
         method: "POST",
@@ -148,11 +156,16 @@ export const useChatStore = defineStore("chat", {
             this.isStreaming = false;
             return;
           }
+          if (chunk.reasoning_delta) {
+            newReasoning.value += chunk.reasoning_delta;
+            assistantMsg.reasoning_content = newReasoning.value;
+          }
           if (chunk.delta) {
             newContent.value += chunk.delta;
             assistantMsg.content = newContent.value;
           }
           if (chunk.done) {
+            assistantMsg.reasoning_content = newReasoning.value;
             this.aiVersions[id].push(newContent.value);
             this.aiVersionIndex = this.aiVersions[id].length - 1;
             this.isStreaming = false;
