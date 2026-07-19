@@ -1,7 +1,28 @@
+# 依赖
 node_modules/
-dist/
-out/
-*.log
-.DS_Store
-.reasonix/
 __pycache__/
+*.pyc
+
+# 构建产物
+frontend/dist/
+
+# 数据库
+*.db
+
+# 加密密钥
+.fernet_key
+
+# 环境
+.env
+.venv/
+venv/
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
