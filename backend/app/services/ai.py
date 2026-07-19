@@ -2,7 +2,8 @@ import json
 import requests
 
 
-def stream_chat(api_url, api_key, model, messages, response_format, cancel_event):
+def stream_chat(api_url, api_key, model, messages, response_format, cancel_event,
+               temperature=None, max_tokens=None):
     url = api_url.rstrip("/") + "/chat/completions"
     headers = {
         "Content-Type": "application/json",
@@ -15,6 +16,10 @@ def stream_chat(api_url, api_key, model, messages, response_format, cancel_event
     }
     if response_format and response_format != "text":
         payload["response_format"] = {"type": response_format}
+    if temperature is not None:
+        payload["temperature"] = temperature
+    if max_tokens is not None:
+        payload["max_tokens"] = max_tokens
 
     try:
         resp = requests.post(

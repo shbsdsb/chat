@@ -136,9 +136,11 @@ def test_setting(setting_id):
     payload = {
         "model": row["model"],
         "messages": [{"role": "user", "content": "hi"}],
-        "max_tokens": 5,
+        "max_tokens": row.get("max_tokens", 5),
         "stream": False,
     }
+    if row.get("temperature") is not None:
+        payload["temperature"] = row["temperature"]
 
     import time
     start = time.time()
@@ -155,11 +157,7 @@ def test_setting(setting_id):
         })
     except requests.RequestException as e:
         latency_ms = int((time.time() - start) * 1000)
-        return ok(data={
-            "success": False,
-            "latency_ms": latency_ms,
-            "error": str(e),
-        })
+        return fail(502, f"连通性测试失败: {e}", request)
 
 
 @api_bp.route("/settings/<setting_id>/default", methods=["PUT"])

@@ -36,6 +36,53 @@ def _get_default_settings():
     return d
 
 
+def _stream_and_save(settings, messages, conv_id, cancel_event):
+    """Shared SSE generator: stream AI response, save assistant message, unregister.
+
+    Yields SSE data events. On any path (success/error/stop), the finally
+    block persists the assistant message and unregisters from SSEManager.
+    """
+    full_content = ""
+    assistant_msg_id = str(uuid.uuid4())
+    assistant_created = datetime.now(timezone.utc).isoformat()
+
+    try:
+        for chunk in stream_chat(
+            settings["api_url"],
+            settings["api_key"],
+            settings["model"],
+            messages,
+            settings.get("response_format", "text"),
+            cancel_event,
+            settings.get("temperature"),
+            settings.get("max_tokens"),
+        ):
+            if "error" in chunk:
+                yield f"data: {json.dumps({'error': chunk['error']})}\n\n"
+                break
+            if chunk.get("stopped"):
+                yield f"data: {json.dumps({'stopped': True})}\n\n"
+                break
+            if chunk.get("delta"):
+                full_content += chunk["delta"]
+                yield f"data: {json.dumps({'delta': chunk['delta'], 'done': False})}\n\n"
+            if chunk.get("done"):
+                yield f"data: {json.dumps({'done': True})}\n\n"
+    finally:
+        if full_content:
+            db = get_db()
+            db.execute(
+                "INSERT INTO messages (id, conversation_id, role, content, created_at) VALUES (?, ?, 'assistant', ?, ?)",
+                (assistant_msg_id, conv_id, full_content, assistant_created),
+            )
+            db.execute(
+                "UPDATE conversations SET updated_at = ? WHERE id = ?",
+                (datetime.now(timezone.utc).isoformat(), conv_id),
+            )
+            db.commit()
+        sse_manager.unregister(conv_id)
+
+
 @api_bp.route("/conversations")
 def list_conversations():
     db = get_db()
@@ -130,47 +177,8 @@ def chat(conv_id):
 
     cancel_event = sse_manager.register(conv_id)
 
-    def generate():
-        full_content = ""
-        assistant_msg_id = str(uuid.uuid4())
-        assistant_created = datetime.now(timezone.utc).isoformat()
-
-        try:
-            for chunk in stream_chat(
-                settings["api_url"],
-                settings["api_key"],
-                settings["model"],
-                messages,
-                settings.get("response_format", "text"),
-                cancel_event,
-            ):
-                if "error" in chunk:
-                    yield f"data: {json.dumps({'error': chunk['error']})}\n\n"
-                    break
-                if chunk.get("stopped"):
-                    yield f"data: {json.dumps({'stopped': True})}\n\n"
-                    break
-                if chunk.get("delta"):
-                    full_content += chunk["delta"]
-                    yield f"data: {json.dumps({'delta': chunk['delta'], 'done': False})}\n\n"
-                if chunk.get("done"):
-                    yield f"data: {json.dumps({'done': True})}\n\n"
-        finally:
-            if full_content:
-                db2 = get_db()
-                db2.execute(
-                    "INSERT INTO messages (id, conversation_id, role, content, created_at) VALUES (?, ?, 'assistant', ?, ?)",
-                    (assistant_msg_id, conv_id, full_content, assistant_created),
-                )
-                db2.execute(
-                    "UPDATE conversations SET updated_at = ? WHERE id = ?",
-                    (datetime.now(timezone.utc).isoformat(), conv_id),
-                )
-                db2.commit()
-            sse_manager.unregister(conv_id)
-
     return Response(
-        stream_with_context(generate()),
+        stream_with_context(_stream_and_save(settings, messages, conv_id, cancel_event)),
         mimetype="text/event-stream",
         headers={
             "Cache-Control": "no-cache",
@@ -239,46 +247,8 @@ def regenerate(conv_id):
 
     cancel_event = sse_manager.register(conv_id)
 
-    def generate():
-        full_content = ""
-        assistant_msg_id = str(uuid.uuid4())
-        assistant_created = datetime.now(timezone.utc).isoformat()
-        try:
-            for chunk in stream_chat(
-                settings["api_url"],
-                settings["api_key"],
-                settings["model"],
-                messages,
-                settings.get("response_format", "text"),
-                cancel_event,
-            ):
-                if "error" in chunk:
-                    yield f"data: {json.dumps({'error': chunk['error']})}\n\n"
-                    break
-                if chunk.get("stopped"):
-                    yield f"data: {json.dumps({'stopped': True})}\n\n"
-                    break
-                if chunk.get("delta"):
-                    full_content += chunk["delta"]
-                    yield f"data: {json.dumps({'delta': chunk['delta'], 'done': False})}\n\n"
-                if chunk.get("done"):
-                    yield f"data: {json.dumps({'done': True})}\n\n"
-        finally:
-            if full_content:
-                db2 = get_db()
-                db2.execute(
-                    "INSERT INTO messages (id, conversation_id, role, content, created_at) VALUES (?, ?, 'assistant', ?, ?)",
-                    (assistant_msg_id, conv_id, full_content, assistant_created),
-                )
-                db2.execute(
-                    "UPDATE conversations SET updated_at = ? WHERE id = ?",
-                    (datetime.now(timezone.utc).isoformat(), conv_id),
-                )
-                db2.commit()
-            sse_manager.unregister(conv_id)
-
     return Response(
-        stream_with_context(generate()),
+        stream_with_context(_stream_and_save(settings, messages, conv_id, cancel_event)),
         mimetype="text/event-stream",
         headers={
             "Cache-Control": "no-cache",

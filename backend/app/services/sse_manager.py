@@ -11,6 +11,9 @@ class SSEManager:
     def register(self, conv_id: str) -> threading.Event:
         event = threading.Event()
         with self._lock:
+            if conv_id in self._events:
+                # Cancel the old stream before replacing
+                self._events[conv_id].set()
             self._events[conv_id] = event
         return event
 
