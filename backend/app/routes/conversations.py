@@ -37,6 +37,7 @@ def _stream_and_save(settings, messages, conv_id, cancel_event):
     block persists the assistant message and unregisters from SSEManager.
     """
     full_content = ""
+    full_reasoning = ""
     assistant_msg_id = str(uuid.uuid4())
     assistant_created = datetime.now(timezone.utc).isoformat()
 
@@ -57,17 +58,20 @@ def _stream_and_save(settings, messages, conv_id, cancel_event):
             if chunk.get("stopped"):
                 yield f"data: {json.dumps({'stopped': True})}\n\n"
                 break
+            if chunk.get("reasoning_delta"):
+                full_reasoning += chunk["reasoning_delta"]
+                yield f"data: {json.dumps({'reasoning_delta': chunk['reasoning_delta']})}\n\n"
             if chunk.get("delta"):
                 full_content += chunk["delta"]
                 yield f"data: {json.dumps({'delta': chunk['delta'], 'done': False})}\n\n"
             if chunk.get("done"):
                 yield f"data: {json.dumps({'done': True})}\n\n"
     finally:
-        if full_content:
+        if full_content or full_reasoning:
             db = get_db()
             db.execute(
-                "INSERT INTO messages (id, conversation_id, role, content, created_at) VALUES (?, ?, 'assistant', ?, ?)",
-                (assistant_msg_id, conv_id, full_content, assistant_created),
+                "INSERT INTO messages (id, conversation_id, role, content, reasoning_content, created_at) VALUES (?, ?, 'assistant', ?, ?, ?)",
+                (assistant_msg_id, conv_id, full_content, full_reasoning, assistant_created),
             )
             db.execute(
                 "UPDATE conversations SET updated_at = ? WHERE id = ?",
