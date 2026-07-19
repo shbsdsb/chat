@@ -7,7 +7,7 @@
       >
         <div class="reasoning-header" @click="reasoningOpen = !reasoningOpen">
           <span class="reasoning-icon">{{ reasoningOpen ? '▼' : '▶' }}</span>
-          <span>🤔 思考过程</span>
+          <span>思考过程</span>
         </div>
         <div v-show="reasoningOpen" class="reasoning-content">
           {{ message.reasoning_content }}
