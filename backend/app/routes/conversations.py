@@ -117,7 +117,7 @@ def chat(conv_id):
         (user_msg_id, conv_id, content, now),
     )
     db.execute(
-        "UPDATE conversations SET updated_at = ?, title = ? WHERE id = ?",
+        "UPDATE conversations SET updated_at = ?, title = CASE WHEN title = '新对话' THEN ? ELSE title END WHERE id = ?",
         (now, content[:30], conv_id),
     )
     db.commit()
