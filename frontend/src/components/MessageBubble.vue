@@ -75,6 +75,7 @@ function onBubbleClick(event) {
 
 .bubble {
   max-width: 70%;
+  min-width: 0;
   padding: 12px 16px;
   border-radius: 12px;
   border: 1px solid #e0e0e0;
@@ -82,6 +83,7 @@ function onBubbleClick(event) {
   color: #333;
   font-size: 15px;
   line-height: 1.6;
+  overflow: hidden;
 }
 .bubble-row.user .bubble {
   border-color: #d5d5d5;
