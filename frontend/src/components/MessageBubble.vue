@@ -13,19 +13,52 @@
           {{ message.reasoning_content }}
         </div>
       </div>
-      <div class="bubble-text">{{ message.content }}</div>
+      <div
+        v-if="message.role === 'assistant'"
+        class="bubble-text"
+        @click="onBubbleClick"
+      >
+        <div
+          v-for="(html, index) in frozenHtmls"
+          :key="index"
+          v-html="html"
+        />
+        <div v-html="liveHtml" />
+      </div>
+      <div v-else class="bubble-text">{{ message.content }}</div>
     </div>
   </div>
 </template>
 
 <script setup>
-import { ref } from "vue";
+import { ref, computed } from "vue";
+import { useMarkdown } from "@/composables/useMarkdown.js";
 
-defineProps({
+const props = defineProps({
   message: { type: Object, required: true },
 });
 
 const reasoningOpen = ref(true);
+
+const content = computed(() => props.message.content);
+const { frozenHtmls, liveHtml } = useMarkdown(content);
+
+function onBubbleClick(event) {
+  const btn = event.target.closest('.copy-btn');
+  if (!btn) return;
+
+  const wrapper = btn.closest('.code-block-wrapper');
+  const code = wrapper.querySelector('code').textContent;
+
+  navigator.clipboard.writeText(code).then(() => {
+    btn.querySelector('.copy-icon').style.display = 'none';
+    btn.querySelector('.check-icon').style.display = '';
+    setTimeout(() => {
+      btn.querySelector('.copy-icon').style.display = '';
+      btn.querySelector('.check-icon').style.display = 'none';
+    }, 2000);
+  });
+}
 </script>
 
 <style scoped>
@@ -58,9 +91,10 @@ const reasoningOpen = ref(true);
 }
 
 .bubble-text {
-  white-space: pre-wrap;
   word-break: break-word;
 }
+
+/* ── 推理块 ──────────────────────────────────── */
 
 .reasoning-block {
   margin-bottom: 10px;
@@ -96,5 +130,88 @@ const reasoningOpen = ref(true);
   word-break: break-word;
   max-height: 200px;
   overflow-y: auto;
+}
+
+/* ── 代码块 ───────────────────────────────────── */
+
+.bubble-text :deep(.code-block-wrapper) {
+  position: relative;
+  margin: 8px 0;
+}
+.bubble-text :deep(.code-block-wrapper pre) {
+  margin: 0;
+  padding: 16px;
+  border-radius: 6px;
+  background: #f6f8fa;
+  overflow-x: auto;
+  font-size: 13px;
+  line-height: 1.5;
+}
+.bubble-text :deep(.code-block-wrapper code) {
+  background: transparent;
+  padding: 0;
+  font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
+}
+
+/* ── 复制按钮 ─────────────────────────────────── */
+
+.bubble-text :deep(.copy-btn) {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  width: 32px;
+  height: 32px;
+  border: 1px solid #d0d7de;
+  border-radius: 6px;
+  background: #fff;
+  color: #656d76;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  transition: opacity 0.15s;
+  padding: 0;
+}
+.bubble-text :deep(.code-block-wrapper:hover .copy-btn) {
+  opacity: 1;
+}
+.bubble-text :deep(.copy-btn:hover) {
+  background: #f3f4f6;
+}
+
+/* ── MD 通用元素 ──────────────────────────────── */
+
+.bubble-text :deep(p) {
+  margin: 0 0 8px;
+}
+.bubble-text :deep(p:last-child) {
+  margin-bottom: 0;
+}
+.bubble-text :deep(ul),
+.bubble-text :deep(ol) {
+  padding-left: 20px;
+  margin: 0 0 8px;
+}
+.bubble-text :deep(blockquote) {
+  border-left: 3px solid #d0d7de;
+  padding-left: 12px;
+  margin: 8px 0;
+  color: #656d76;
+}
+.bubble-text :deep(table) {
+  border-collapse: collapse;
+  margin: 8px 0;
+  width: 100%;
+}
+.bubble-text :deep(th),
+.bubble-text :deep(td) {
+  border: 1px solid #d0d7de;
+  padding: 6px 12px;
+  text-align: left;
+}
+.bubble-text :deep(th) {
+  background: #f6f8fa;
+  font-weight: 600;
 }
 </style>
