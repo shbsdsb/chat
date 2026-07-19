@@ -92,6 +92,7 @@ function onBubbleClick(event) {
 
 .bubble-text {
   word-break: break-word;
+  overflow: hidden;
 }
 
 /* ── 推理块 ──────────────────────────────────── */
@@ -137,6 +138,8 @@ function onBubbleClick(event) {
 .bubble-text :deep(.code-block-wrapper) {
   position: relative;
   margin: 8px 0;
+  max-width: 100%;
+  overflow: auto;
 }
 .bubble-text :deep(.code-block-wrapper pre) {
   margin: 0;
