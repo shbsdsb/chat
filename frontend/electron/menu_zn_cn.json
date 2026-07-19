@@ -1,0 +1,61 @@
+{
+  "_comment": "中文（简体）菜单栏。role/accelerator 保持不动，仅翻译 label。",
+  "menu": [
+    {
+      "id": "file",
+      "label": "文件",
+      "submenu": [
+        { "id": "settings",   "label": "设置",              "accelerator": "CmdOrCtrl+," },
+        { "id": "separator1", "type": "separator" },
+        { "id": "close",      "label": "关闭窗口",          "role": "close" },
+        { "id": "quit",       "label": "退出",               "role": "quit",   "accelerator": "CmdOrCtrl+Q" }
+      ]
+    },
+    {
+      "id": "edit",
+      "label": "编辑",
+      "submenu": [
+        { "id": "undo",       "label": "撤销",               "role": "undo" },
+        { "id": "redo",       "label": "恢复",               "role": "redo" },
+        { "id": "separator2", "type": "separator" },
+        { "id": "cut",        "label": "剪切",               "role": "cut" },
+        { "id": "copy",       "label": "复制",               "role": "copy" },
+        { "id": "paste",      "label": "粘贴",               "role": "paste" },
+        { "id": "delete",     "label": "删除",               "role": "delete" },
+        { "id": "selectAll",  "label": "全选",               "role": "selectAll" }
+      ]
+    },
+    {
+      "id": "view",
+      "label": "视图",
+      "submenu": [
+        { "id": "reload",      "label": "重新加载",           "role": "reload",          "accelerator": "CmdOrCtrl+R" },
+        { "id": "forceReload", "label": "强制重新加载",       "role": "forceReload",     "accelerator": "CmdOrCtrl+Shift+R" },
+        { "id": "devtools",    "label": "开发者工具",         "role": "toggleDevTools",  "accelerator": "F12" },
+        { "id": "separator3",  "type": "separator" },
+        { "id": "resetZoom",   "label": "重置缩放",           "role": "resetZoom",       "accelerator": "CmdOrCtrl+0" },
+        { "id": "zoomIn",      "label": "放大",               "role": "zoomIn",          "accelerator": "CmdOrCtrl+=" },
+        { "id": "zoomOut",     "label": "缩小",               "role": "zoomOut",         "accelerator": "CmdOrCtrl+-" },
+        { "id": "separator4",  "type": "separator" },
+        { "id": "fullscreen",  "label": "全屏",               "role": "togglefullscreen","accelerator": "F11" }
+      ]
+    },
+    {
+      "id": "window",
+      "label": "窗口",
+      "submenu": [
+        { "id": "minimize",   "label": "最小化",             "role": "minimize",  "accelerator": "CmdOrCtrl+M" },
+        { "id": "zoom",       "label": "缩放",               "role": "zoom" },
+        { "id": "separator5", "type": "separator" },
+        { "id": "front",      "label": "全部置于顶层",       "role": "front" }
+      ]
+    },
+    {
+      "id": "help",
+      "label": "帮助",
+      "submenu": [
+        { "id": "about",      "label": "关于 Chat",          "role": "about" }
+      ]
+    }
+  ]
+}

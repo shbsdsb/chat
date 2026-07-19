@@ -1,0 +1,61 @@
+{
+  "_comment": "Electron 应用菜单栏定义。修改 label 即可本土化，role/accelerator 保持不动。",
+  "menu": [
+    {
+      "id": "file",
+      "label": "File",
+      "submenu": [
+        { "id": "settings",   "label": "Settings",        "accelerator": "CmdOrCtrl+," },
+        { "id": "separator1", "type": "separator" },
+        { "id": "close",      "label": "Close Window",    "role": "close" },
+        { "id": "quit",       "label": "Quit",             "role": "quit",   "accelerator": "CmdOrCtrl+Q" }
+      ]
+    },
+    {
+      "id": "edit",
+      "label": "Edit",
+      "submenu": [
+        { "id": "undo",       "label": "Undo",             "role": "undo" },
+        { "id": "redo",       "label": "Redo",             "role": "redo" },
+        { "id": "separator2", "type": "separator" },
+        { "id": "cut",        "label": "Cut",              "role": "cut" },
+        { "id": "copy",       "label": "Copy",             "role": "copy" },
+        { "id": "paste",      "label": "Paste",            "role": "paste" },
+        { "id": "delete",     "label": "Delete",           "role": "delete" },
+        { "id": "selectAll",  "label": "Select All",       "role": "selectAll" }
+      ]
+    },
+    {
+      "id": "view",
+      "label": "View",
+      "submenu": [
+        { "id": "reload",     "label": "Reload",           "role": "reload",    "accelerator": "CmdOrCtrl+R" },
+        { "id": "forceReload","label": "Force Reload",     "role": "forceReload", "accelerator": "CmdOrCtrl+Shift+R" },
+        { "id": "devtools",   "label": "Toggle DevTools",  "role": "toggleDevTools", "accelerator": "F12" },
+        { "id": "separator3", "type": "separator" },
+        { "id": "resetZoom",  "label": "Reset Zoom",       "role": "resetZoom",  "accelerator": "CmdOrCtrl+0" },
+        { "id": "zoomIn",     "label": "Zoom In",          "role": "zoomIn",     "accelerator": "CmdOrCtrl+=" },
+        { "id": "zoomOut",    "label": "Zoom Out",         "role": "zoomOut",    "accelerator": "CmdOrCtrl+-" },
+        { "id": "separator4", "type": "separator" },
+        { "id": "fullscreen", "label": "Toggle Fullscreen", "role": "togglefullscreen", "accelerator": "F11" }
+      ]
+    },
+    {
+      "id": "window",
+      "label": "Window",
+      "submenu": [
+        { "id": "minimize",   "label": "Minimize",         "role": "minimize",  "accelerator": "CmdOrCtrl+M" },
+        { "id": "zoom",       "label": "Zoom",             "role": "zoom" },
+        { "id": "separator5", "type": "separator" },
+        { "id": "front",      "label": "Bring All to Front","role": "front" }
+      ]
+    },
+    {
+      "id": "help",
+      "label": "Help",
+      "submenu": [
+        { "id": "about",      "label": "About Chat",       "role": "about" }
+      ]
+    }
+  ]
+}
