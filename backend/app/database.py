@@ -46,11 +46,12 @@ def init_db():
         );
 
         CREATE TABLE IF NOT EXISTS messages (
-            id              TEXT PRIMARY KEY,
-            conversation_id TEXT NOT NULL,
-            role            TEXT NOT NULL CHECK (role IN ('user', 'assistant')),
-            content         TEXT NOT NULL,
-            created_at      TEXT NOT NULL,
+            id                TEXT PRIMARY KEY,
+            conversation_id   TEXT NOT NULL,
+            role              TEXT NOT NULL CHECK (role IN ('user', 'assistant')),
+            content           TEXT NOT NULL,
+            reasoning_content TEXT NOT NULL DEFAULT '',
+            created_at        TEXT NOT NULL,
             FOREIGN KEY (conversation_id)
                 REFERENCES conversations(id) ON DELETE CASCADE
         );
@@ -72,5 +73,14 @@ def init_db():
             updated_at      TEXT NOT NULL
         );
     """)
+
+    # 兼容旧数据库：新增 reasoning_content 列
+    try:
+        conn.execute(
+            "ALTER TABLE messages ADD COLUMN reasoning_content TEXT NOT NULL DEFAULT ''"
+        )
+    except sqlite3.OperationalError:
+        pass  # 列已存在（新数据库已在 CREATE TABLE 中包含）
+
     conn.commit()
     conn.close()
