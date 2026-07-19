@@ -20,3 +20,15 @@ export function remove(id) {
 }
 
 // chat / regenerate 为 SSE 流式，使用 sse() 工具函数调用
+
+export function rename(id, title) {
+  return http.put(`/conversations/${id}`, { title });
+}
+
+export function editMessage(convId, msgId, content) {
+  return http.put(`/conversations/${convId}/messages/${msgId}`, { content });
+}
+
+export function stopGeneration(convId) {
+  return http.post(`/conversations/${convId}/stop`);
+}

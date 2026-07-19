@@ -1,0 +1,187 @@
+import { defineStore } from "pinia";
+import * as conversationsApi from "@/api/conversations";
+import { sse } from "@/api/sse";
+
+const NEW_CONV = "__new__";
+
+export const useChatStore = defineStore("chat", {
+  state: () => ({
+    conversations: [],
+    activeConvId: null,
+    messages: [],
+    isStreaming: false,
+    abortController: null,
+    aiVersionIndex: 0,
+    aiVersions: {},
+  }),
+
+  actions: {
+    async loadConversations() {
+      this.conversations = await conversationsApi.list();
+    },
+
+    // 进入空白对话页，不创建后端记录
+    createConversation() {
+      this.activeConvId = NEW_CONV;
+      this.messages = [];
+      this.aiVersions = {};
+    },
+
+    async deleteConversation(id) {
+      await conversationsApi.remove(id);
+      this.conversations = this.conversations.filter((c) => c.id !== id);
+      if (this.activeConvId === id) {
+        this.activeConvId = null;
+        this.messages = [];
+      }
+    },
+
+    async renameConversation(id, title) {
+      const updated = await conversationsApi.rename(id, title);
+      const idx = this.conversations.findIndex((c) => c.id === id);
+      if (idx !== -1) this.conversations[idx] = updated;
+    },
+
+    async selectConversation(id) {
+      this.activeConvId = id;
+      this.aiVersionIndex = 0;
+      if (id === NEW_CONV) {
+        this.messages = [];
+        return;
+      }
+      const data = await conversationsApi.detail(id);
+      this.messages = data.messages || [];
+    },
+
+    async sendMessage(content) {
+      if (!this.activeConvId || this.isStreaming) return;
+
+      // 首次发送 → 先创建对话
+      if (this.activeConvId === NEW_CONV) {
+        const conv = await conversationsApi.create();
+        this.activeConvId = conv.id;
+        this.conversations.unshift(conv);
+      }
+
+      const userMsg = {
+        id: "temp-" + Date.now(),
+        role: "user",
+        content,
+        created_at: new Date().toISOString(),
+      };
+      this.messages.push(userMsg);
+
+      const assistantMsg = {
+        id: "temp-" + (Date.now() + 1),
+        role: "assistant",
+        content: "",
+        created_at: new Date().toISOString(),
+      };
+      this.messages.push(assistantMsg);
+      this.isStreaming = true;
+
+      const es = sse(`/conversations/${this.activeConvId}/chat`, {
+        method: "POST",
+        body: JSON.stringify({ content }),
+        onMessage: (chunk) => {
+          if (chunk.stopped) {
+            this.isStreaming = false;
+            return;
+          }
+          if (chunk.delta) {
+            const last = this.messages[this.messages.length - 1];
+            if (last && last.role === "assistant") {
+              last.content += chunk.delta;
+            }
+          }
+          if (chunk.done) {
+            this.isStreaming = false;
+          }
+        },
+        onError: (err) => {
+          this.isStreaming = false;
+          console.error("SSE error:", err);
+        },
+        onDone: () => {
+          this.isStreaming = false;
+        },
+      });
+
+      this.abortController = es;
+    },
+
+    stopStreaming() {
+      if (this.abortController) {
+        conversationsApi.stopGeneration(this.activeConvId);
+        this.abortController.close();
+        this.abortController = null;
+      }
+      this.isStreaming = false;
+    },
+
+    async editMessage(id, content) {
+      const updated = await conversationsApi.editMessage(this.activeConvId, id, content);
+      const idx = this.messages.findIndex((m) => m.id === id);
+      if (idx !== -1) {
+        this.messages[idx] = updated;
+        this.messages = this.messages.slice(0, idx + 1);
+      }
+    },
+
+    replayMessage(id) {
+      const assistantMsg = this.messages.find((m) => m.id === id && m.role === "assistant");
+      if (!assistantMsg || this.isStreaming) return;
+
+      if (!this.aiVersions[id]) {
+        this.aiVersions[id] = [assistantMsg.content];
+        this.aiVersionIndex = 0;
+      }
+
+      this.isStreaming = true;
+      const newContent = { value: "" };
+
+      const es = sse(`/conversations/${this.activeConvId}/regenerate`, {
+        method: "POST",
+        body: JSON.stringify({}),
+        onMessage: (chunk) => {
+          if (chunk.stopped) {
+            this.isStreaming = false;
+            return;
+          }
+          if (chunk.delta) {
+            newContent.value += chunk.delta;
+            assistantMsg.content = newContent.value;
+          }
+          if (chunk.done) {
+            this.aiVersions[id].push(newContent.value);
+            this.aiVersionIndex = this.aiVersions[id].length - 1;
+            this.isStreaming = false;
+          }
+        },
+        onError: (err) => {
+          this.isStreaming = false;
+          console.error("Replay error:", err);
+        },
+        onDone: () => {
+          this.isStreaming = false;
+        },
+      });
+
+      this.abortController = es;
+    },
+
+    switchVersion(id, dir) {
+      const versions = this.aiVersions[id];
+      if (!versions || versions.length <= 1) return;
+
+      const newIdx = this.aiVersionIndex + dir;
+      if (newIdx < 0 || newIdx >= versions.length) return;
+
+      this.aiVersionIndex = newIdx;
+      const msg = this.messages.find((m) => m.id === id);
+      if (msg) {
+        msg.content = versions[newIdx];
+      }
+    },
+  },
+});

@@ -26,3 +26,9 @@ export function test(id) {
 export function setDefault(id) {
   return http.put(`/settings/${id}/default`);
 }
+
+export function fetchModels(apiUrl, apiKey) {
+  return http.get("/settings/models", {
+    params: { api_url: apiUrl, api_key: apiKey },
+  });
+}
