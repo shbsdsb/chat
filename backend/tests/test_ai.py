@@ -1,6 +1,7 @@
 import json
 import threading
-from unittest.mock import patch, Mock, MagicMock
+import requests
+from unittest.mock import patch, Mock
 from app.services.ai import stream_chat
 
 
@@ -84,7 +85,7 @@ class TestStreamChat:
     def test_request_error(self):
         cancel = threading.Event()
         with patch("app.services.ai.requests.post") as mock_post:
-            mock_post.side_effect = Exception("Connection refused")
+            mock_post.side_effect = requests.ConnectionError("Connection refused")
 
             results = list(stream_chat(
                 "https://api.openai.com/v1",

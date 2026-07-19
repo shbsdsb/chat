@@ -49,5 +49,5 @@ def stream_chat(api_url, api_key, model, messages, response_format, cancel_event
 
         yield {"done": True}
 
-    except Exception as e:
+    except requests.RequestException as e:
         yield {"error": str(e)}
