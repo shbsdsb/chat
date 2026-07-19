@@ -46,9 +46,13 @@ def stream_chat(api_url, api_key, model, messages, response_format, cancel_event
 
             try:
                 chunk = json.loads(data_str)
-                delta = chunk["choices"][0]["delta"].get("content", "")
-                if delta:
-                    yield {"delta": delta}
+                delta = chunk["choices"][0]["delta"]
+                reasoning = delta.get("reasoning_content", "")
+                content = delta.get("content", "")
+                if reasoning:
+                    yield {"reasoning_delta": reasoning}
+                if content:
+                    yield {"delta": content}
             except (json.JSONDecodeError, KeyError, IndexError):
                 continue
 
