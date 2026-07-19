@@ -12,6 +12,13 @@ frontend/dist/
 # 加密密钥
 .fernet_key
 
+# 用户运行时数据
+user_data/
+backend/user_data/
+
+# Reasonix
+.reasonix/
+
 # 环境
 .env
 .venv/

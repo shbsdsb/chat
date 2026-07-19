@@ -160,6 +160,28 @@ def test_setting(setting_id):
         return fail(502, f"连通性测试失败: {e}", request)
 
 
+@api_bp.route("/settings/models", methods=["POST"])
+def fetch_models():
+    body = request.get_json(silent=True) or {}
+    api_url = (body.get("api_url") or "").strip()
+    api_key = (body.get("api_key") or "").strip()
+
+    if not api_url:
+        return fail(400, "api_url 不能为空", request)
+
+    url = api_url.rstrip("/") + "/models"
+    headers = {"Authorization": f"Bearer {api_key}"} if api_key else {}
+
+    try:
+        resp = requests.get(url, headers=headers, timeout=30)
+        resp.raise_for_status()
+        data = resp.json()
+        models = [m.get("id", "") for m in data.get("data", [])]
+        return ok(data=models)
+    except requests.RequestException as e:
+        return fail(502, f"获取模型列表失败: {e}", request)
+
+
 @api_bp.route("/settings/<setting_id>/default", methods=["PUT"])
 def set_default_setting(setting_id):
     row = _get_setting_or_404(setting_id)
