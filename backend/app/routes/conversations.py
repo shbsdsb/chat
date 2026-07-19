@@ -67,9 +67,6 @@ def _stream_and_save(settings, messages, conv_id, cancel_event):
                 "reasoning_content": full_reasoning,
                 "created_at": assistant_created,
             })
-            update_conversation(conv_id, {
-                "updated_at": datetime.now(timezone.utc).isoformat(),
-            })
         sse_manager.unregister(conv_id)
 
 
@@ -141,9 +138,8 @@ def chat(conv_id):
         "created_at": now,
     })
 
-    # 自动标题
-    new_title = content[:20] if row.get("title") == "新对话" else row.get("title")
-    update_conversation(conv_id, {"updated_at": now, "title": new_title})
+    # 更新用户消息时间（用于排序）
+    update_conversation(conv_id, {"updated_at": now})
 
     messages = get_messages_for_chat(conv_id)
 

@@ -18,6 +18,10 @@ export const useChatStore = defineStore("chat", {
   actions: {
     async loadConversations() {
       this.conversations = await conversationsApi.list();
+      this.conversations.forEach((c) => {
+        c.lastMessageAt = c.updated_at;
+      });
+      this.conversations.sort((a, b) => (b.lastMessageAt || "").localeCompare(a.lastMessageAt || ""));
     },
 
     // 进入空白对话页，不创建后端记录
@@ -63,9 +67,19 @@ export const useChatStore = defineStore("chat", {
 
       // 首次发送 → 先创建后端对话记录
       if (this.activeConvId === NEW_CONV) {
-        const conv = await conversationsApi.create();
+        const title = content.slice(0, 20);
+        const conv = await conversationsApi.create(title);
+        conv.lastMessageAt = new Date().toISOString();
         this.activeConvId = conv.id;
         this.conversations.unshift(conv);
+        this.conversations.sort((a, b) => (b.lastMessageAt || "").localeCompare(a.lastMessageAt || ""));
+      } else {
+        const now = new Date().toISOString();
+        const idx = this.conversations.findIndex((c) => c.id === this.activeConvId);
+        if (idx !== -1) {
+          this.conversations[idx].lastMessageAt = now;
+        }
+        this.conversations.sort((a, b) => (b.lastMessageAt || "").localeCompare(a.lastMessageAt || ""));
       }
 
       const userMsg = {
