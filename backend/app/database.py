@@ -1,44 +1,14 @@
 """
-数据库初始化 & Fernet 密钥管理
+数据库初始化
 """
 import sqlite3
 import os
 from flask import g
-from cryptography.fernet import Fernet
 
 
 PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.dirname(__file__)))
 USER_DATA_DIR = os.path.join(PROJECT_ROOT, "user_data")
 DB_PATH = os.path.join(USER_DATA_DIR, "chat.db")
-FERNET_KEY_PATH = os.path.join(USER_DATA_DIR, ".fernet_key")
-
-_fernet = None
-
-
-# ── Fernet ────────────────────────────────────────────
-
-def get_fernet():
-    """单例加载 Fernet 实例。首次调用时若密钥文件不存在则自动生成。"""
-    global _fernet
-    if _fernet is not None:
-        return _fernet
-    os.makedirs(USER_DATA_DIR, exist_ok=True)
-    if not os.path.exists(FERNET_KEY_PATH):
-        key = Fernet.generate_key()
-        with open(FERNET_KEY_PATH, "wb") as f:
-            f.write(key)
-    with open(FERNET_KEY_PATH, "rb") as f:
-        key = f.read()
-    _fernet = Fernet(key)
-    return _fernet
-
-
-def encrypt(plain: str) -> str:
-    return get_fernet().encrypt(plain.encode()).decode()
-
-
-def decrypt(cipher: str) -> str:
-    return get_fernet().decrypt(cipher.encode()).decode()
 
 
 # ── 数据库 ─────────────────────────────────────────────
@@ -94,7 +64,7 @@ def init_db():
             api_url         TEXT NOT NULL,
             api_key         TEXT NOT NULL,
             model           TEXT NOT NULL DEFAULT 'gpt-4o',
-            response_format TEXT NOT NULL DEFAULT 'text',
+            response_format TEXT NOT NULL DEFAULT '',
             temperature     REAL NOT NULL DEFAULT 0.7,
             max_tokens      INTEGER NOT NULL DEFAULT 4096,
             is_default      INTEGER NOT NULL DEFAULT 0,

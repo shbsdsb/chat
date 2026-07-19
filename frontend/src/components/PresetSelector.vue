@@ -1,21 +1,19 @@
 <template>
   <div class="preset-area">
-    <!-- 正常模式：下拉 + 按钮 -->
-    <div v-if="mode === 'normal'" class="preset-row">
+    <div class="preset-row">
       <select v-model="store.activePresetId" class="preset-select" @change="onSelect">
         <option :value="null" disabled>请选择预设</option>
         <option v-for="p in store.presets" :key="p.id" :value="p.id">
           {{ p.name }}
         </option>
       </select>
-      <button class="preset-btn" title="保存" @click="handleSave" :disabled="!store.activePresetId">
+      <button class="preset-btn" title="保存" @click="handleSave" :disabled="!canSave">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
       </button>
-      <button class="preset-btn" title="新建" @click="startNew">+</button>
+      <button class="preset-btn" title="新建" @click="clearForm">+</button>
       <button
         class="preset-btn"
-        :class="{ 'danger-confirm': deleteConfirm }"
-        :title="deleteConfirm ? '再次点击确认删除' : '删除'"
+        title="删除"
         @click="handleDelete"
         :disabled="!store.activePresetId"
       >
@@ -23,102 +21,150 @@
       </button>
     </div>
 
-    <!-- 新建模式：内联输入框 -->
-    <div v-if="mode === 'new'" class="preset-row">
-      <input
-        ref="newNameInput"
-        v-model="newName"
-        class="preset-input"
-        placeholder="输入预设名称，回车确认"
-        @keydown.enter="confirmNew"
-        @keydown.escape="cancelNew"
-      />
-      <button class="preset-btn preset-btn-ok" title="确认" @click="confirmNew" :disabled="!newName.trim()">
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>
-      </button>
-      <button class="preset-btn preset-btn-cancel" title="取消" @click="cancelNew">
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
-      </button>
-    </div>
-
     <!-- 状态提示 -->
     <transition name="fade">
       <span v-if="toastMsg" class="preset-toast">{{ toastMsg }}</span>
     </transition>
+
+    <!-- 删除确认弹窗 -->
+    <div v-if="showDeleteDialog" class="dialog-overlay" @click.self="cancelDelete">
+      <div class="dialog-box dialog-danger">
+        <div class="dialog-danger-icon">
+          <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#ef5350" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+        </div>
+        <p class="dialog-danger-msg">确定要删除预设「{{ deletingPresetName }}」吗？此操作不可撤销。</p>
+        <div class="dialog-actions">
+          <button class="dialog-btn dialog-btn-cancel" @click="cancelDelete">取消</button>
+          <button class="dialog-btn dialog-btn-danger" @click="confirmDelete">确定删除</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- 命名弹窗：保存新预设 -->
+    <div v-if="showNameDialog" class="dialog-overlay" @click.self="cancelNameDialog">
+      <div class="dialog-box">
+        <div class="dialog-title">保存预设</div>
+        <input
+          ref="nameInput"
+          v-model="dialogName"
+          class="dialog-input"
+          @keydown.enter="confirmNameDialog"
+          @keydown.escape="cancelNameDialog"
+        />
+        <div class="dialog-actions">
+          <button class="dialog-btn dialog-btn-cancel" @click="cancelNameDialog">取消</button>
+          <button class="dialog-btn dialog-btn-ok" @click="confirmNameDialog" :disabled="!dialogName.trim()">确认</button>
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 
 <script setup>
-import { ref, nextTick } from "vue";
+import { ref, computed, nextTick } from "vue";
 import { useSettingsStore } from "@/stores/settings";
+import { useAlertStore } from "@/stores/alert";
 const store = useSettingsStore();
+const alert = useAlertStore();
 
-const mode = ref("normal");   // "normal" | "new"
-const newName = ref("");
-const newNameInput = ref(null);
-const deleteConfirm = ref(false);
+const showDeleteDialog = ref(false);
+const deletingPresetName = ref("");
 const toastMsg = ref("");
 let toastTimer = null;
+
+// ── 保存按钮可用性 ──────────────────────────────
+const canSave = computed(() => {
+  return !!(store.apiUrl?.trim() && store.apiKey?.trim() && store.model?.trim());
+});
+
+// ── 命名弹窗 ────────────────────────────────────
+const showNameDialog = ref(false);
+const dialogName = ref("");
+const nameInput = ref(null);
 
 function onSelect() {
   store.selectPreset(store.activePresetId);
 }
 
-// ── 新建 ──────────────────────────────────────────
-async function startNew() {
-  // 清空当前表单字段，避免用旧预设的数据创建新预设
+// ── 新建（仅清空表单，保存由保存按钮负责）──────────
+function clearForm() {
   store.activePresetId = null;
   store.apiUrl = "";
   store.apiKey = "";
   store.model = "gpt-4o";
   store.responseFormat = "";
-  mode.value = "new";
-  newName.value = "";
-  await nextTick();
-  newNameInput.value?.focus();
-}
-
-async function confirmNew() {
-  const name = newName.value.trim();
-  if (!name) return;
-  try {
-    await store.createPreset(name);
-    mode.value = "normal";
-    showToast("预设已创建");
-  } catch (e) {
-    showToast("创建失败: " + (e.message || "未知错误"));
-  }
-}
-
-function cancelNew() {
-  mode.value = "normal";
-  newName.value = "";
 }
 
 // ── 保存 ──────────────────────────────────────────
 async function handleSave() {
+  if (!canSave.value) {
+    alert.warning("表单不完整", "请填写完整的 API URL、API Key 和 Model");
+    return;
+  }
+
+  // 编辑已有预设 → 直接更新
+  if (store.activePresetId) {
+    try {
+      await store.savePreset();
+      showToast("保存成功");
+    } catch (e) {
+      alert.error("保存失败", e.message || "未知错误");
+    }
+    return;
+  }
+
+  // 新建预设：生成预命名（model 名，重复则追加 (1)(2)...）
+  let base = store.model.trim();
+  let candidate = base;
+  let n = 1;
+  while (store.presets.some((p) => p.name === candidate)) {
+    candidate = `${base}(${n})`;
+    n++;
+  }
+  dialogName.value = candidate;
+  showNameDialog.value = true;
+  await nextTick();
+  nameInput.value?.focus();
+  nameInput.value?.select();
+}
+
+// ── 命名弹窗操作 ────────────────────────────────
+async function confirmNameDialog() {
+  const name = dialogName.value.trim();
+  if (!name) return;
+  showNameDialog.value = false;
   try {
-    await store.savePreset();
-    showToast("保存成功");
+    await store.createPreset(name);
+    showToast("预设已保存");
   } catch (e) {
-    showToast("保存失败: " + (e.message || "未知错误"));
+    alert.error("保存失败", e.message || "未知错误");
   }
 }
 
+function cancelNameDialog() {
+  showNameDialog.value = false;
+  dialogName.value = "";
+}
+
 // ── 删除 ──────────────────────────────────────────
-async function handleDelete() {
-  if (!deleteConfirm.value) {
-    deleteConfirm.value = true;
-    setTimeout(() => { deleteConfirm.value = false; }, 3000);
-    return;
-  }
-  deleteConfirm.value = false;
+function handleDelete() {
+  const preset = store.presets.find((p) => p.id === store.activePresetId);
+  deletingPresetName.value = preset?.name || "未命名";
+  showDeleteDialog.value = true;
+}
+
+async function confirmDelete() {
+  showDeleteDialog.value = false;
   try {
     await store.deletePreset(store.activePresetId);
     showToast("已删除");
   } catch (e) {
-    showToast("删除失败: " + (e.message || "未知错误"));
+    alert.error("删除失败", e.message || "未知错误");
   }
+}
+
+function cancelDelete() {
+  showDeleteDialog.value = false;
 }
 
 // ── Toast ─────────────────────────────────────────
@@ -152,23 +198,6 @@ function showToast(msg) {
   font-family: inherit;
 }
 
-/* 新建模式的输入框 */
-.preset-input {
-  flex: 1;
-  padding: 8px 12px;
-  border: 1px solid #4a90d9;
-  border-radius: 8px;
-  font-size: 14px;
-  color: #333;
-  outline: none;
-  font-family: inherit;
-  background: #f8fbff;
-}
-.preset-input:focus {
-  border-color: #357abd;
-  box-shadow: 0 0 0 2px rgba(74, 144, 217, 0.15);
-}
-
 .preset-btn {
   width: 32px;
   height: 32px;
@@ -194,39 +223,6 @@ function showToast(msg) {
   cursor: default;
 }
 
-.preset-btn-ok {
-  border-color: #4caf50;
-  color: #4caf50;
-}
-.preset-btn-ok:hover:not(:disabled) {
-  background: #e8f5e9;
-  color: #388e3c;
-}
-.preset-btn-ok:disabled {
-  opacity: 0.3;
-}
-
-.preset-btn-cancel {
-  border-color: #ef5350;
-  color: #ef5350;
-}
-.preset-btn-cancel:hover:not(:disabled) {
-  background: #ffebee;
-  color: #d32f2f;
-}
-
-/* 删除按钮"确认删除"状态——变红闪烁 */
-.preset-btn.danger-confirm {
-  background: #ffebee;
-  border-color: #ef5350;
-  color: #ef5350;
-  animation: pulse-danger 0.8s infinite;
-}
-@keyframes pulse-danger {
-  0%, 100% { box-shadow: 0 0 0 0 rgba(239, 83, 80, 0.4); }
-  50%      { box-shadow: 0 0 0 4px rgba(239, 83, 80, 0); }
-}
-
 /* Toast 提示 */
 .preset-toast {
   position: absolute;
@@ -248,5 +244,116 @@ function showToast(msg) {
 .fade-enter-from,
 .fade-leave-to {
   opacity: 0;
+}
+
+/* ── 弹窗通用 ─────────────────────────────────── */
+.dialog-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.35);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+
+.dialog-box {
+  background: #fff;
+  border-radius: 12px;
+  padding: 24px;
+  width: 360px;
+  max-width: 90vw;
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.18);
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.dialog-title {
+  font-size: 15px;
+  font-weight: 600;
+  color: #333;
+}
+
+.dialog-input {
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid #d5d5d5;
+  border-radius: 8px;
+  font-size: 14px;
+  color: #333;
+  outline: none;
+  font-family: inherit;
+  box-sizing: border-box;
+}
+.dialog-input:focus {
+  border-color: #4a90d9;
+  box-shadow: 0 0 0 2px rgba(74, 144, 217, 0.15);
+}
+
+.dialog-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+}
+
+.dialog-btn {
+  padding: 8px 20px;
+  border-radius: 6px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  border: 1px solid transparent;
+  transition: background 0.15s, color 0.15s;
+  font-family: inherit;
+}
+
+.dialog-btn-cancel {
+  background: #f5f5f5;
+  color: #666;
+  border-color: #ddd;
+}
+.dialog-btn-cancel:hover {
+  background: #e8e8e8;
+  color: #333;
+}
+
+.dialog-btn-ok {
+  background: #4a90d9;
+  color: #fff;
+}
+.dialog-btn-ok:hover:not(:disabled) {
+  background: #357abd;
+}
+.dialog-btn-ok:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+.dialog-btn-danger {
+  background: #ef5350;
+  color: #fff;
+}
+.dialog-btn-danger:hover {
+  background: #d32f2f;
+}
+
+/* 删除确认弹窗 — 红色主题 */
+.dialog-danger {
+  width: 360px;
+  text-align: center;
+  border-top: 3px solid #ef5350;
+}
+
+.dialog-danger-icon {
+  display: flex;
+  justify-content: center;
+}
+
+.dialog-danger-msg {
+  font-size: 14px;
+  color: #555;
+  line-height: 1.6;
+  margin: 0;
 }
 </style>

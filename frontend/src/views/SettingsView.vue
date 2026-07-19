@@ -10,7 +10,6 @@
       <input
         v-model="store.apiUrl"
         class="input-text"
-        placeholder="https://api.openai.com/v1"
       />
     </div>
 
@@ -20,7 +19,6 @@
         v-model="store.apiKey"
         class="input-text"
         type="password"
-        placeholder="sk-..."
       />
     </div>
 
@@ -42,7 +40,7 @@
       <span v-if="testing" class="spinner"></span>
       {{ testing ? '测试中...' : '测试连接' }}
     </button>
-    <p v-if="testResult" :class="['test-result', testOk ? 'ok' : 'fail']">
+    <p v-if="testResult" class="test-result">
       {{ testResult }}
     </p>
   </div>
@@ -51,14 +49,15 @@
 <script setup>
 import { ref, onMounted } from "vue";
 import { useSettingsStore } from "@/stores/settings";
+import { useAlertStore } from "@/stores/alert";
 import PresetSelector from "@/components/PresetSelector.vue";
 import ModelSelector from "@/components/ModelSelector.vue";
 import ResponseFormatInput from "@/components/ResponseFormatInput.vue";
 
 const store = useSettingsStore();
+const alert = useAlertStore();
 const testing = ref(false);
 const testResult = ref("");
-const testOk = ref(false);
 
 onMounted(async () => {
   try {
@@ -73,11 +72,10 @@ async function handleTestConnection() {
   testResult.value = "";
   try {
     await store.fetchModels();
-    testOk.value = true;
     testResult.value = `连接成功！获取到 ${store.availableModels.length} 个模型。`;
   } catch (e) {
-    testOk.value = false;
-    testResult.value = e?.response?.data?.detail || e?.message || "连接失败，请检查 API URL 和 Key。";
+    testResult.value = "";
+    alert.error("连接失败", e.message || "请检查 API URL 和 Key 是否正确");
   } finally {
     testing.value = false;
   }
@@ -161,11 +159,6 @@ async function handleTestConnection() {
   margin-top: 4px;
   font-size: 13px;
   line-height: 1.4;
-}
-.test-result.ok {
   color: #2e7d32;
-}
-.test-result.fail {
-  color: #c62828;
 }
 </style>

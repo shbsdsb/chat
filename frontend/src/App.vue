@@ -16,6 +16,7 @@
         <SettingsView @saved="showSettings = false" />
       </SettingsDrawer>
     </div>
+    <AlertDialog />
   </div>
 </template>
 
@@ -24,6 +25,7 @@ import { ref } from "vue";
 import Sidebar from "@/components/Sidebar.vue";
 import SettingsDrawer from "@/components/SettingsDrawer.vue";
 import SettingsView from "@/views/SettingsView.vue";
+import AlertDialog from "@/components/AlertDialog.vue";
 
 const showSettings = ref(false);
 </script>

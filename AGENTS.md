@@ -1,7 +1,7 @@
 # Chat — Vue 3 + Flask + Electron 桌面聊天应用
 
 ## Project
-前后端分离的 AI 聊天桌面应用。前端 Vue 3 SPA 经 Vite 构建、Electron 打包；后端 Flask REST API，通过 SSE 流式转发 OpenAI 兼容的 chat completions。数据存储在项目根 `user_data/` 下的 SQLite（chat.db）中，API Key 使用 Fernet 加密。
+前后端分离的 AI 聊天桌面应用。前端 Vue 3 SPA 经 Vite 构建、Electron 打包；后端 Flask REST API，通过 SSE 流式转发 OpenAI 兼容的 chat completions。数据存储在项目根 `user_data/` 下的 SQLite（chat.db）中。
 
 ## Commands
 ```bash
@@ -32,7 +32,7 @@ chat/
 │   ├── config.json                        # Flask 配置（DEBUG/HOST/PORT/SECRET_KEY）
 │   ├── app/
 │   │   ├── __init__.py                    # create_app() 工厂：加载配置、CORS、注册蓝图、init_db
-│   │   ├── database.py                    # SQLite 连接管理 (g-based)、Fernet 加解密、建表
+│   │   ├── database.py                    # SQLite 连接管理 (g-based)、建表
 │   │   ├── routes/
 │   │   │   ├── __init__.py                # Blueprint("api", __name__)
 │   │   │   ├── conversations.py           # /api/conversations + SSE 流式 chat
@@ -62,7 +62,7 @@ chat/
 │       │   ├── Home.vue                   # 聊天主页面
 │       │   └── SettingsView.vue           # 设置页面
 │       └── router/index.js               # / 和 /settings 两个路由
-└── user_data/                             # 运行时数据（chat.db, .fernet_key, logs/）
+└── user_data/                             # 运行时数据（chat.db, logs/）
 ```
 
 ## Conventions
@@ -71,7 +71,7 @@ chat/
 - **工厂模式**：`create_app()` 创建 Flask 实例，不在模块顶层持有 app 引用。
 - **数据库**：直接用 `sqlite3` 原生 SQL，无 ORM。连接通过 `g.db` 绑定到请求生命周期，teardown 时关闭。
 - **API 响应**：统一使用 `ok(data, message)` / `fail(code, message)` 返回 `{code, message, data}` 结构。code=0 成功，非 0 失败。
-- **API Key 加密**：存入 settings 表前调 `encrypt()`，读取后调 `decrypt()`，脱敏返回时仅显示前 4 位 + `****`。
+- **API Key**：明文存储在 settings 表的 api_key 字段中。
 - **蓝图注册**：先在 `routes/__init__.py` 中建 `api_bp`，再 import 各子模块触发 `@api_bp.route()` 装饰器，最后 `register_blueprint(api_bp, url_prefix="/api")`。
 - **测试**：pytest，`conftest.py` 用 `monkeypatch` 将 DB_PATH 指向 tmp_path，防止污染真实数据。无 mock 框架依赖。
 

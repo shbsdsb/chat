@@ -17,7 +17,9 @@
 <script setup>
 import { ref } from "vue";
 import { useSettingsStore } from "@/stores/settings";
+import { useAlertStore } from "@/stores/alert";
 const store = useSettingsStore();
+const alert = useAlertStore();
 const fetching = ref(false);
 
 async function handleFetch() {
@@ -25,7 +27,7 @@ async function handleFetch() {
   try {
     await store.fetchModels();
   } catch (e) {
-    alert("拉取失败: " + e.message);
+    alert.error("拉取失败", e.message || "未知错误");
   } finally {
     fetching.value = false;
   }

@@ -3,7 +3,7 @@ import json
 from datetime import datetime, timezone
 from flask import request, Response, stream_with_context
 from app.routes import api_bp
-from app.database import get_db, decrypt
+from app.database import get_db
 from app.utils.response import ok, fail
 from app.services.sse_manager import sse_manager
 from app.services.ai import stream_chat
@@ -27,13 +27,7 @@ def _get_default_settings():
     ).fetchone()
     if not row:
         return None
-    d = dict(row)
-    if d.get("api_key"):
-        try:
-            d["api_key"] = decrypt(d["api_key"])
-        except Exception:
-            pass
-    return d
+    return dict(row)
 
 
 def _stream_and_save(settings, messages, conv_id, cancel_event):
@@ -52,7 +46,7 @@ def _stream_and_save(settings, messages, conv_id, cancel_event):
             settings["api_key"],
             settings["model"],
             messages,
-            settings.get("response_format", "text"),
+            settings.get("response_format", ""),
             cancel_event,
             settings.get("temperature"),
             settings.get("max_tokens"),

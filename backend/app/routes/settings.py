@@ -2,20 +2,13 @@ import uuid
 from datetime import datetime, timezone
 from flask import request
 from app.routes import api_bp
-from app.database import get_db, encrypt, decrypt
+from app.database import get_db
 from app.utils.response import ok, fail
 import requests
 
 
 def _row_to_dict(row):
     d = dict(row)
-    if d.get("api_key"):
-        key = d["api_key"]
-        try:
-            key = decrypt(key)
-        except Exception:
-            pass
-        d["api_key"] = key[:4] + "****" if len(key) >= 4 else "****"
     d["is_default"] = bool(d.get("is_default"))
     return d
 
@@ -47,9 +40,8 @@ def create_setting():
 
     sid = str(uuid.uuid4())
     now = datetime.now(timezone.utc).isoformat()
-    encrypted_key = encrypt(api_key) if api_key else ""
     model = body.get("model", "gpt-4o")
-    response_format = body.get("response_format", "text")
+    response_format = body.get("response_format", "")
     temperature = body.get("temperature", 0.7)
     max_tokens = body.get("max_tokens", 4096)
 
@@ -58,7 +50,7 @@ def create_setting():
         INSERT INTO settings (id, name, api_url, api_key, model, response_format,
                               temperature, max_tokens, is_default, created_at, updated_at)
         VALUES (?, ?, ?, ?, ?, ?, ?, ?, 0, ?, ?)
-    """, (sid, name, api_url, encrypted_key, model, response_format,
+    """, (sid, name, api_url, api_key, model, response_format,
           temperature, max_tokens, now, now))
     db.commit()
 
@@ -80,11 +72,11 @@ def update_setting(setting_id):
     temperature = body.get("temperature", row["temperature"])
     max_tokens = body.get("max_tokens", row["max_tokens"])
 
-    api_key = body.get("api_key", "")
-    if api_key == "":
-        encrypted_key = row["api_key"]
+    new_api_key = body.get("api_key", "")
+    if new_api_key == "":
+        api_key = row["api_key"]
     else:
-        encrypted_key = encrypt(api_key)
+        api_key = new_api_key
 
     now = datetime.now(timezone.utc).isoformat()
 
@@ -94,7 +86,7 @@ def update_setting(setting_id):
         SET name = ?, api_url = ?, api_key = ?, model = ?, response_format = ?,
             temperature = ?, max_tokens = ?, updated_at = ?
         WHERE id = ?
-    """, (name, api_url, encrypted_key, model, response_format,
+    """, (name, api_url, api_key, model, response_format,
           temperature, max_tokens, now, setting_id))
     db.commit()
 
@@ -123,10 +115,6 @@ def test_setting(setting_id):
         return fail(404, "配置不存在", request)
 
     api_key = row["api_key"]
-    try:
-        api_key = decrypt(api_key)
-    except Exception:
-        pass
 
     url = row["api_url"].rstrip("/") + "/chat/completions"
     headers = {

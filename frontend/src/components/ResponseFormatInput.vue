@@ -2,7 +2,6 @@
   <textarea
     v-model="store.responseFormat"
     class="resp-format-input"
-    placeholder='{"type": "json_object"}'
   ></textarea>
 </template>
 

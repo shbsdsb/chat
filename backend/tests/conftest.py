@@ -13,7 +13,6 @@ def setup_test_db(monkeypatch, tmp_path):
     """Use a temp database for testing so production data is never touched."""
     test_db = str(tmp_path / "test_chat.db")
     monkeypatch.setattr(db_module, "DB_PATH", test_db)
-    monkeypatch.setattr(db_module, "FERNET_KEY_PATH", str(tmp_path / ".fernet_key"))
 
 
 @pytest.fixture

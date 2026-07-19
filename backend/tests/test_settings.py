@@ -35,7 +35,8 @@ class TestSettingsList:
         assert body["code"] == 0
         assert len(body["data"]) == 2
         for item in body["data"]:
-            assert "****" in item["api_key"] or item["api_key"] == ""
+            # 明文存储，api_key 原样返回
+            assert "api_key" in item
 
 
 class TestSettingsCreate:
@@ -50,7 +51,7 @@ class TestSettingsCreate:
         body = json.loads(resp.get_data(as_text=True))
         assert body["code"] == 0
         assert body["data"]["name"] == "OpenAI"
-        assert body["data"]["api_key"] == "sk-a****"
+        assert body["data"]["api_key"] == "sk-abc123"
 
     def test_create_missing_name(self, client, app):
         _setup_db(app)
@@ -77,7 +78,7 @@ class TestSettingsUpdate:
         assert body["code"] == 0
         assert body["data"]["name"] == "New"
         assert body["data"]["api_url"] == "https://b.com"
-        assert "****" in body["data"]["api_key"]
+        assert body["data"]["api_key"] == "sk-abc"
 
     def test_update_nonexistent(self, client, app):
         _setup_db(app)
