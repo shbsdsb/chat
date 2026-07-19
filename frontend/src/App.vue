@@ -1,13 +1,16 @@
 <template>
   <div id="app" class="app-shell">
     <header class="top-bar">
-      <span class="top-title">Chat</span>
+      <div class="top-left">
+        <button class="top-btn" @click="showConversations = !showConversations">会话记录</button>
+        <span class="top-title">Chat</span>
+      </div>
       <nav class="top-nav">
         <button class="top-btn" @click="showSettings = !showSettings">API 设置</button>
       </nav>
     </header>
     <div class="app-body">
-      <Sidebar />
+      <ConversationsDrawer :visible="showConversations" @close="showConversations = false" />
       <main class="main-area">
         <router-view />
       </main>
@@ -21,13 +24,20 @@
 </template>
 
 <script setup>
-import { ref } from "vue";
-import Sidebar from "@/components/Sidebar.vue";
+import { ref, onMounted } from "vue";
+import ConversationsDrawer from "@/components/ConversationsDrawer.vue";
 import SettingsDrawer from "@/components/SettingsDrawer.vue";
 import SettingsView from "@/views/SettingsView.vue";
 import AlertDialog from "@/components/AlertDialog.vue";
+import { useChatStore } from "@/stores/chat";
 
+const chatStore = useChatStore();
+const showConversations = ref(false);
 const showSettings = ref(false);
+
+onMounted(() => {
+  chatStore.loadConversations();
+});
 </script>
 
 <style>
@@ -59,6 +69,12 @@ html, body, #app {
   background: #fafafa;
   border-bottom: 1px solid #e0e0e0;
   flex-shrink: 0;
+}
+
+.top-left {
+  display: flex;
+  align-items: center;
+  gap: 10px;
 }
 
 .top-title {
@@ -97,6 +113,5 @@ html, body, #app {
   flex-direction: column;
   background: #fff;
   overflow: hidden;
-  transition: margin-right 0.25s ease;
 }
 </style>

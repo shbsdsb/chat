@@ -3,7 +3,7 @@ import os
 from flask import Flask
 from flask_cors import CORS
 
-from app.database import init_db, close_db
+from app.storage import init_storage
 
 
 def create_app():
@@ -37,9 +37,6 @@ def create_app():
 
     # ── 首次启动初始化 ──────────────────────────────
     os.makedirs(os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), "user_data", "logs"), exist_ok=True)
-    init_db()  # 建表（幂等）
-
-    # ── 每个请求结束时关闭 DB ───────────────────────
-    flask_app.teardown_appcontext(close_db)
+    init_storage()  # 初始化 JSON 存储（幂等）
 
     return flask_app

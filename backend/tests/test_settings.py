@@ -1,28 +1,29 @@
 import json
-import uuid
-from app.database import init_db, get_db
+from app.storage import init_storage, CONVERSATIONS_FILE, SETTINGS_FILE
 
 
-def _setup_db(app):
+def _setup_storage(app):
     with app.app_context():
-        init_db()
-        db = get_db()
-        db.execute("DELETE FROM messages")
-        db.execute("DELETE FROM conversations")
-        db.execute("DELETE FROM settings")
-        db.commit()
+        init_storage()
+        import app.storage as storage_module
+        storage_module._write_json(CONVERSATIONS_FILE, [])
+        storage_module._write_json(SETTINGS_FILE, [])
+        import os, glob
+        msg_dir = storage_module.MESSAGES_DIR
+        for f in glob.glob(os.path.join(msg_dir, "*.json")):
+            os.remove(f)
 
 
 class TestSettingsList:
     def test_empty_list(self, client, app):
-        _setup_db(app)
+        _setup_storage(app)
         resp = client.get("/api/settings")
         body = json.loads(resp.get_data(as_text=True))
         assert body["code"] == 0
         assert body["data"] == []
 
     def test_returns_presets(self, client, app):
-        _setup_db(app)
+        _setup_storage(app)
         client.post("/api/settings", json={
             "name": "OpenAI", "api_url": "https://api.openai.com/v1", "api_key": "sk-abc"
         })
@@ -35,13 +36,12 @@ class TestSettingsList:
         assert body["code"] == 0
         assert len(body["data"]) == 2
         for item in body["data"]:
-            # 明文存储，api_key 原样返回
             assert "api_key" in item
 
 
 class TestSettingsCreate:
     def test_create_success(self, client, app):
-        _setup_db(app)
+        _setup_storage(app)
         resp = client.post("/api/settings", json={
             "name": "OpenAI",
             "api_url": "https://api.openai.com/v1",
@@ -54,7 +54,7 @@ class TestSettingsCreate:
         assert body["data"]["api_key"] == "sk-abc123"
 
     def test_create_missing_name(self, client, app):
-        _setup_db(app)
+        _setup_storage(app)
         resp = client.post("/api/settings", json={
             "api_url": "https://api.openai.com/v1",
             "api_key": "sk-abc",
@@ -65,7 +65,7 @@ class TestSettingsCreate:
 
 class TestSettingsUpdate:
     def test_update_success(self, client, app):
-        _setup_db(app)
+        _setup_storage(app)
         create_resp = client.post("/api/settings", json={
             "name": "Old", "api_url": "https://a.com", "api_key": "sk-abc"
         })
@@ -81,7 +81,7 @@ class TestSettingsUpdate:
         assert body["data"]["api_key"] == "sk-abc"
 
     def test_update_nonexistent(self, client, app):
-        _setup_db(app)
+        _setup_storage(app)
         resp = client.put("/api/settings/no-such-id", json={
             "name": "X", "api_url": "https://a.com", "api_key": "sk-abc"
         })
@@ -90,7 +90,7 @@ class TestSettingsUpdate:
 
 class TestSettingsDelete:
     def test_delete_success(self, client, app):
-        _setup_db(app)
+        _setup_storage(app)
         create_resp = client.post("/api/settings", json={
             "name": "X", "api_url": "https://a.com", "api_key": "sk-abc"
         })
@@ -103,7 +103,7 @@ class TestSettingsDelete:
         assert len(json.loads(list_resp.get_data(as_text=True))["data"]) == 0
 
     def test_cannot_delete_default(self, client, app):
-        _setup_db(app)
+        _setup_storage(app)
         create_resp = client.post("/api/settings", json={
             "name": "Default", "api_url": "https://a.com", "api_key": "sk-abc"
         })
@@ -116,7 +116,7 @@ class TestSettingsDelete:
 
 class TestSettingsSetDefault:
     def test_set_default(self, client, app):
-        _setup_db(app)
+        _setup_storage(app)
         r1 = client.post("/api/settings", json={
             "name": "A", "api_url": "https://a.com", "api_key": "sk-a"
         })

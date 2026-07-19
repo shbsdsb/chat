@@ -54,9 +54,14 @@ export const useChatStore = defineStore("chat", {
     },
 
     async sendMessage(content) {
-      if (!this.activeConvId || this.isStreaming) return;
+      if (this.isStreaming) return;
 
-      // 首次发送 → 先创建对话
+      // 无活跃会话 → 视为新对话
+      if (!this.activeConvId) {
+        this.activeConvId = NEW_CONV;
+      }
+
+      // 首次发送 → 先创建后端对话记录
       if (this.activeConvId === NEW_CONV) {
         const conv = await conversationsApi.create();
         this.activeConvId = conv.id;

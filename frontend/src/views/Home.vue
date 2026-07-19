@@ -1,7 +1,6 @@
 <template>
   <div class="chat-view">
-    <WelcomeBanner v-if="!chatStore.activeConvId" />
-    <div v-else class="chat-content">
+    <div class="chat-content">
       <MessageList />
       <InputBar />
     </div>
@@ -9,12 +8,8 @@
 </template>
 
 <script setup>
-import { useChatStore } from "@/stores/chat";
-import WelcomeBanner from "@/components/WelcomeBanner.vue";
 import MessageList from "@/components/MessageList.vue";
 import InputBar from "@/components/InputBar.vue";
-
-const chatStore = useChatStore();
 </script>
 
 <style scoped>

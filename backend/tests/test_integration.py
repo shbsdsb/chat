@@ -3,23 +3,27 @@
 不涉及真实 AI 调用（chat/regenerate 使用 mock）。
 """
 import json
-from app.database import init_db, get_db
+import uuid
+import os
+import glob
+from app.storage import init_storage, add_message, CONVERSATIONS_FILE, SETTINGS_FILE
 
 
-def _setup_db(app):
+def _setup_storage(app):
     with app.app_context():
-        init_db()
-        db = get_db()
-        db.execute("DELETE FROM messages")
-        db.execute("DELETE FROM conversations")
-        db.execute("DELETE FROM settings")
-        db.commit()
+        init_storage()
+        import app.storage as storage_module
+        storage_module._write_json(CONVERSATIONS_FILE, [])
+        storage_module._write_json(SETTINGS_FILE, [])
+        msg_dir = storage_module.MESSAGES_DIR
+        for f in glob.glob(os.path.join(msg_dir, "*.json")):
+            os.remove(f)
 
 
 class TestFullWorkflow:
     def test_settings_crud_workflow(self, client, app):
         """完整预设管理流程。"""
-        _setup_db(app)
+        _setup_storage(app)
 
         # 1. 创建预设
         r = client.post("/api/settings", json={
@@ -56,7 +60,7 @@ class TestFullWorkflow:
 
     def test_conversations_workflow(self, client, app):
         """完整对话 CRUD 流程（不涉及 AI）。"""
-        _setup_db(app)
+        _setup_storage(app)
 
         # 创建两个对话
         r1 = client.post("/api/conversations", json={"title": "测试对话"})
@@ -83,31 +87,28 @@ class TestFullWorkflow:
 
     def test_edit_message_truncates_following(self, client, app):
         """编辑消息后，后续消息应被删除。"""
-        _setup_db(app)
+        _setup_storage(app)
 
         # 创建会话并插入多条消息
         r = client.post("/api/conversations", json={"title": "Test"})
         cid = json.loads(r.get_data(as_text=True))["data"]["id"]
 
-        import uuid
-        with app.app_context():
-            db = get_db()
-            m1 = str(uuid.uuid4())
-            m2 = str(uuid.uuid4())
-            m3 = str(uuid.uuid4())
-            db.execute(
-                "INSERT INTO messages (id, conversation_id, role, content, created_at) VALUES (?, ?, 'user', ?, '2026-01-01T00:00:01Z')",
-                (m1, cid, "问题1"),
-            )
-            db.execute(
-                "INSERT INTO messages (id, conversation_id, role, content, created_at) VALUES (?, ?, 'assistant', ?, '2026-01-01T00:00:02Z')",
-                (m2, cid, "回答1"),
-            )
-            db.execute(
-                "INSERT INTO messages (id, conversation_id, role, content, created_at) VALUES (?, ?, 'user', ?, '2026-01-01T00:00:03Z')",
-                (m3, cid, "问题2"),
-            )
-            db.commit()
+        m1 = str(uuid.uuid4())
+        m2 = str(uuid.uuid4())
+        m3 = str(uuid.uuid4())
+
+        add_message({
+            "id": m1, "conversation_id": cid, "role": "user",
+            "content": "问题1", "reasoning_content": "", "created_at": "2026-01-01T00:00:01Z",
+        })
+        add_message({
+            "id": m2, "conversation_id": cid, "role": "assistant",
+            "content": "回答1", "reasoning_content": "", "created_at": "2026-01-01T00:00:02Z",
+        })
+        add_message({
+            "id": m3, "conversation_id": cid, "role": "user",
+            "content": "问题2", "reasoning_content": "", "created_at": "2026-01-01T00:00:03Z",
+        })
 
         # 编辑第一条消息
         r = client.put(f"/api/conversations/{cid}/messages/{m1}", json={

@@ -2,7 +2,10 @@ import uuid
 from datetime import datetime, timezone
 from flask import request
 from app.routes import api_bp
-from app.database import get_db
+from app.storage import (
+    get_setting, list_settings_raw, create_setting,
+    update_setting, delete_setting, get_default_setting, set_default_setting,
+)
 from app.utils.response import ok, fail
 import requests
 
@@ -14,20 +17,16 @@ def _row_to_dict(row):
 
 
 def _get_setting_or_404(setting_id):
-    db = get_db()
-    row = db.execute("SELECT * FROM settings WHERE id = ?", (setting_id,)).fetchone()
-    return row
+    return get_setting(setting_id)
 
 
 @api_bp.route("/settings")
 def list_settings():
-    db = get_db()
-    rows = db.execute("SELECT * FROM settings ORDER BY created_at DESC").fetchall()
-    return ok(data=[_row_to_dict(r) for r in rows])
+    return ok(data=[_row_to_dict(r) for r in list_settings_raw()])
 
 
 @api_bp.route("/settings", methods=["POST"])
-def create_setting():
+def create_setting_route():
     body = request.get_json(silent=True) or {}
     name = (body.get("name") or "").strip()
     api_url = (body.get("api_url") or "").strip()
@@ -45,21 +44,26 @@ def create_setting():
     temperature = body.get("temperature", 0.7)
     max_tokens = body.get("max_tokens", 4096)
 
-    db = get_db()
-    db.execute("""
-        INSERT INTO settings (id, name, api_url, api_key, model, response_format,
-                              temperature, max_tokens, is_default, created_at, updated_at)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, 0, ?, ?)
-    """, (sid, name, api_url, api_key, model, response_format,
-          temperature, max_tokens, now, now))
-    db.commit()
+    s = {
+        "id": sid,
+        "name": name,
+        "api_url": api_url,
+        "api_key": api_key,
+        "model": model,
+        "response_format": response_format,
+        "temperature": temperature,
+        "max_tokens": max_tokens,
+        "is_default": False,
+        "created_at": now,
+        "updated_at": now,
+    }
+    create_setting(s)
 
-    row = _get_setting_or_404(sid)
-    return ok(data=_row_to_dict(row))
+    return ok(data=_row_to_dict(s))
 
 
 @api_bp.route("/settings/<setting_id>", methods=["PUT"])
-def update_setting(setting_id):
+def update_setting_route(setting_id):
     row = _get_setting_or_404(setting_id)
     if not row:
         return fail(404, "配置不存在", request)
@@ -80,31 +84,31 @@ def update_setting(setting_id):
 
     now = datetime.now(timezone.utc).isoformat()
 
-    db = get_db()
-    db.execute("""
-        UPDATE settings
-        SET name = ?, api_url = ?, api_key = ?, model = ?, response_format = ?,
-            temperature = ?, max_tokens = ?, updated_at = ?
-        WHERE id = ?
-    """, (name, api_url, api_key, model, response_format,
-          temperature, max_tokens, now, setting_id))
-    db.commit()
+    updates = {
+        "name": name,
+        "api_url": api_url,
+        "api_key": api_key,
+        "model": model,
+        "response_format": response_format,
+        "temperature": temperature,
+        "max_tokens": max_tokens,
+        "updated_at": now,
+    }
+    update_setting(setting_id, updates)
 
     updated = _get_setting_or_404(setting_id)
     return ok(data=_row_to_dict(updated))
 
 
 @api_bp.route("/settings/<setting_id>", methods=["DELETE"])
-def delete_setting(setting_id):
+def delete_setting_route(setting_id):
     row = _get_setting_or_404(setting_id)
     if not row:
         return fail(404, "配置不存在", request)
-    if row["is_default"]:
+    if row.get("is_default"):
         return fail(409, "不能删除默认配置，请先切换默认配置", request)
 
-    db = get_db()
-    db.execute("DELETE FROM settings WHERE id = ?", (setting_id,))
-    db.commit()
+    delete_setting(setting_id)
     return ok()
 
 
@@ -171,14 +175,10 @@ def fetch_models():
 
 
 @api_bp.route("/settings/<setting_id>/default", methods=["PUT"])
-def set_default_setting(setting_id):
+def set_default_route(setting_id):
     row = _get_setting_or_404(setting_id)
     if not row:
         return fail(404, "配置不存在", request)
 
-    db = get_db()
-    db.execute("UPDATE settings SET is_default = 0")
-    db.execute("UPDATE settings SET is_default = 1 WHERE id = ?", (setting_id,))
-    db.commit()
-
+    set_default_setting(setting_id)
     return ok(data={"is_default": True})
