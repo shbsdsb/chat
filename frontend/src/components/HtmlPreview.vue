@@ -31,9 +31,18 @@
     <!-- 预览视图 -->
     <div v-show="mode === 'preview'" class="preview-view">
       <iframe
+        v-if="useBlob"
         ref="previewFrame"
         sandbox="allow-scripts"
-        :srcdoc="srcdocContent"
+        :src="blobUrl"
+        class="preview-frame"
+        @load="onFrameLoad"
+      />
+      <iframe
+        v-else
+        ref="previewFrame"
+        sandbox="allow-scripts"
+        :srcdoc="props.code"
         class="preview-frame"
         @load="onFrameLoad"
       />
@@ -56,6 +65,7 @@ const frameHeight = ref('300px');
 // ── Blob URL 生命周期管理 ───────────────────────
 
 const blobUrl = ref(null);
+const useBlob = computed(() => props.code && props.code.length > 100 * 1024);
 
 function createBlobUrl(raw) {
   const blob = new Blob([raw], { type: 'text/html' });
@@ -69,24 +79,13 @@ function revokeBlobUrl() {
   }
 }
 
-// 超长 HTML (>100KB) 用 blob: URL 替代直接 srcdoc
-const srcdocContent = computed(() => {
-  const raw = props.code;
-  if (raw.length > 100 * 1024) {
-    revokeBlobUrl();               // 先释放旧 URL
+// code 变化时管理 blob URL 生命周期（副作用集中在 watch，computed 保持纯计算）
+watch(() => props.code, (raw) => {
+  revokeBlobUrl();
+  if (raw && useBlob.value) {
     blobUrl.value = createBlobUrl(raw);
-    return blobUrl.value;
   }
-  return raw;
-});
-
-// props.code 变化时释放旧 blob URL（确保非超长→超长切换时也清理）
-watch(() => props.code, () => {
-  // srcdocContent 已处理超长情况；若切回短文本则清理残留
-  if (props.code && props.code.length <= 100 * 1024) {
-    revokeBlobUrl();
-  }
-});
+}, { immediate: true });
 
 // ── 代码高亮 ─────────────────────────────────────
 
@@ -144,14 +143,19 @@ function onFrameLoad() {
 // ── 复制 ─────────────────────────────────────────
 
 function onCopy(e) {
+  const btn = e.currentTarget;
+  const copyIcon = btn.querySelector('.copy-icon');
+  const checkIcon = btn.querySelector('.check-icon');
+
   navigator.clipboard.writeText(props.code).then(() => {
-    const btn = e.currentTarget;
-    btn.querySelector('.copy-icon').style.display = 'none';
-    btn.querySelector('.check-icon').style.display = '';
+    copyIcon.style.display = 'none';
+    checkIcon.style.display = '';
     setTimeout(() => {
-      btn.querySelector('.copy-icon').style.display = '';
-      btn.querySelector('.check-icon').style.display = 'none';
+      copyIcon.style.display = '';
+      checkIcon.style.display = 'none';
     }, 2000);
+  }).catch(() => {
+    // 剪贴板失败时静默处理，图标保持不变
   });
 }
 
