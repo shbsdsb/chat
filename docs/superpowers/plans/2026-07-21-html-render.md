@@ -201,7 +201,7 @@ git commit -m "feat: add HTML code block placeholder in fence renderer"
 </template>
 
 <script setup>
-import { ref, computed, nextTick } from 'vue';
+import { ref, computed, watch, onBeforeUnmount } from 'vue';
 import hljs from 'highlight.js';
 
 const props = defineProps({
@@ -212,15 +212,42 @@ const mode = ref('code');
 const previewFrame = ref(null);
 const frameHeight = ref('300px');
 
+// ── Blob URL 生命周期管理 ───────────────────────
+
+const blobUrl = ref(null);
+
+function createBlobUrl(raw) {
+  const blob = new Blob([raw], { type: 'text/html' });
+  return URL.createObjectURL(blob);
+}
+
+function revokeBlobUrl() {
+  if (blobUrl.value) {
+    URL.revokeObjectURL(blobUrl.value);
+    blobUrl.value = null;
+  }
+}
+
 // 超长 HTML (>100KB) 用 blob: URL 替代直接 srcdoc
 const srcdocContent = computed(() => {
   const raw = props.code;
   if (raw.length > 100 * 1024) {
-    const blob = new Blob([raw], { type: 'text/html' });
-    return URL.createObjectURL(blob);
+    revokeBlobUrl();               // 先释放旧 URL
+    blobUrl.value = createBlobUrl(raw);
+    return blobUrl.value;
   }
   return raw;
 });
+
+// props.code 变化时释放旧 blob URL（确保非超长→超长切换时也清理）
+watch(() => props.code, () => {
+  // srcdocContent 已处理超长情况；若切回短文本则清理残留
+  if (props.code && props.code.length <= 100 * 1024) {
+    revokeBlobUrl();
+  }
+});
+
+// ── 代码高亮 ─────────────────────────────────────
 
 const highlightedHtml = computed(() => {
   if (!props.code) return '';
@@ -231,18 +258,49 @@ const highlightedHtml = computed(() => {
   }
 });
 
+// ── iframe 高度自适应 ────────────────────────────
+
+let observer = null;
+
+function updateFrameHeight() {
+  try {
+    const body = previewFrame.value?.contentDocument?.body;
+    if (body) {
+      frameHeight.value = Math.max(body.scrollHeight, 100) + 'px';
+    }
+  } catch {
+    // 忽略跨域限制
+  }
+}
+
 function onFrameLoad() {
   if (!previewFrame.value) return;
+
+  // 清理旧的 observer
+  if (observer) observer.disconnect();
+
   try {
     const body = previewFrame.value.contentDocument?.body;
     if (body) {
-      const h = body.scrollHeight;
-      frameHeight.value = Math.max(h, 100) + 'px';
+      updateFrameHeight();
+
+      // MutationObserver 监听内容动态变化（JS 添加元素、展开折叠等）
+      observer = new MutationObserver(() => {
+        updateFrameHeight();
+      });
+      observer.observe(body, {
+        childList: true,
+        subtree: true,
+        attributes: true,
+        attributeFilter: ['style', 'class'],
+      });
     }
   } catch {
-    // 跨域或其他限制时保持默认高度
+    // 忽略
   }
 }
+
+// ── 复制 ─────────────────────────────────────────
 
 function onCopy() {
   navigator.clipboard.writeText(props.code).then(() => {
@@ -255,6 +313,13 @@ function onCopy() {
     }, 2000);
   });
 }
+
+// ── 清理 ─────────────────────────────────────────
+
+onBeforeUnmount(() => {
+  revokeBlobUrl();
+  if (observer) observer.disconnect();
+});
 </script>
 
 <style scoped>
