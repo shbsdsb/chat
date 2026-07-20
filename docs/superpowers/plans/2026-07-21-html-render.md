@@ -441,7 +441,7 @@ const reasoningOpen = ref(true);
 const content = computed(() => props.message.content);
 const { frozenHtmls, liveHtml } = useMarkdown(content);
 
-// ── HtmlPreview 动态挂载 ────────────────────────
+// ── HtmlPreview 增量挂载 ────────────────────────
 
 const bubbleTextRef = ref(null);
 const previewApps = new Map();  // DOM element → Vue app
@@ -450,8 +450,11 @@ function mountHtmlPreviews() {
   if (!bubbleTextRef.value) return;
 
   const containers = bubbleTextRef.value.querySelectorAll('.html-preview-container');
+  const currentContainers = new Set(containers);
+
+  // 增量挂载：仅处理尚未挂载的新容器
   containers.forEach(container => {
-    if (previewApps.has(container)) return;  // 已挂载
+    if (previewApps.has(container)) return;  // 已挂载，跳过
 
     const base64 = container.getAttribute('data-html-code');
     if (!base64) return;
@@ -467,18 +470,23 @@ function mountHtmlPreviews() {
     app.mount(container);
     previewApps.set(container, app);
   });
+
+  // 清理已从 DOM 中移除的容器（消息重新生成、段落减少等场景）
+  previewApps.forEach((app, container) => {
+    if (!currentContainers.has(container) || !document.contains(container)) {
+      app.unmount();
+      previewApps.delete(container);
+    }
+  });
 }
 
 function unmountHtmlPreviews() {
-  previewApps.forEach((app, container) => {
-    app.unmount();
-  });
+  previewApps.forEach((app) => app.unmount());
   previewApps.clear();
 }
 
-// 渲染后挂载
+// 增量挂载：不全量卸载，仅处理新增/移除的容器
 watch([frozenHtmls, liveHtml], () => {
-  unmountHtmlPreviews();
   nextTick(() => mountHtmlPreviews());
 });
 
