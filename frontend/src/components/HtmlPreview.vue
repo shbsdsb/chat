@@ -25,7 +25,7 @@
 
     <!-- 代码视图 -->
     <div v-show="mode === 'code'" class="code-view">
-      <pre><code class="hljs language-html" v-html="highlightedHtml" />
+      <pre><code class="hljs language-html" v-html="highlightedHtml"></code></pre>
     </div>
 
     <!-- 预览视图 -->

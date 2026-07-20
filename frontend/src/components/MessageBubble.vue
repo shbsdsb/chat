@@ -15,6 +15,7 @@
       </div>
       <div
         v-if="message.role === 'assistant'"
+        ref="bubbleTextRef"
         class="bubble-text"
         @click="onBubbleClick"
       >
@@ -31,8 +32,9 @@
 </template>
 
 <script setup>
-import { ref, computed } from "vue";
+import { ref, computed, watch, onMounted, onBeforeUnmount, nextTick, createApp } from "vue";
 import { useMarkdown } from "@/composables/useMarkdown.js";
+import HtmlPreview from "@/components/HtmlPreview.vue";
 
 const props = defineProps({
   message: { type: Object, required: true },
@@ -43,12 +45,76 @@ const reasoningOpen = ref(true);
 const content = computed(() => props.message.content);
 const { frozenHtmls, liveHtml } = useMarkdown(content);
 
+// ── HtmlPreview 增量挂载 ────────────────────────
+
+const bubbleTextRef = ref(null);
+const previewApps = new Map();  // DOM element → Vue app
+
+function mountHtmlPreviews() {
+  if (!bubbleTextRef.value) return;
+
+  const containers = bubbleTextRef.value.querySelectorAll('.html-preview-container');
+  const currentContainers = new Set(containers);
+
+  // 增量挂载：仅处理尚未挂载的新容器
+  containers.forEach(container => {
+    if (previewApps.has(container)) return;  // 已挂载，跳过
+
+    const base64 = container.getAttribute('data-html-code');
+    if (!base64) return;
+
+    let code;
+    try {
+      code = decodeURIComponent(escape(atob(base64)));
+    } catch {
+      code = '';
+    }
+
+    const app = createApp(HtmlPreview, { code });
+    app.mount(container);
+    previewApps.set(container, app);
+  });
+
+  // 清理已从 DOM 中移除的容器（消息重新生成、段落减少等场景）
+  previewApps.forEach((app, container) => {
+    if (!currentContainers.has(container) || !document.contains(container)) {
+      app.unmount();
+      previewApps.delete(container);
+    }
+  });
+}
+
+function unmountHtmlPreviews() {
+  previewApps.forEach((app) => app.unmount());
+  previewApps.clear();
+}
+
+// 增量挂载：不全量卸载，仅处理新增/移除的容器
+watch([frozenHtmls, liveHtml], () => {
+  nextTick(() => mountHtmlPreviews());
+});
+
+onMounted(() => {
+  nextTick(() => mountHtmlPreviews());
+});
+
+onBeforeUnmount(() => {
+  unmountHtmlPreviews();
+});
+
+// ── 事件委托：仅处理非 HTML 代码块的复制 ─────────
+
 function onBubbleClick(event) {
   const btn = event.target.closest('.copy-btn');
   if (!btn) return;
 
+  // 跳过 HtmlPreview 内部的复制按钮（组件自管理）
+  if (btn.closest('.html-preview-block')) return;
+
   const wrapper = btn.closest('.code-block-wrapper');
-  const code = wrapper.querySelector('code').textContent;
+  if (!wrapper) return;
+
+  const code = wrapper.querySelector('code')?.textContent || '';
 
   navigator.clipboard.writeText(code).then(() => {
     btn.querySelector('.copy-icon').style.display = 'none';
@@ -218,5 +284,11 @@ function onBubbleClick(event) {
 .bubble-text :deep(th) {
   background: #f6f8fa;
   font-weight: 600;
+}
+
+/* ── HtmlPreview 容器 ──────────────────────────── */
+
+.bubble-text :deep(.html-preview-container) {
+  margin: 8px 0;
 }
 </style>
