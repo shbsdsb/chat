@@ -17,7 +17,7 @@ function highlightCode(code, lang) {
 }
 
 const md = new MarkdownIt({
-  html: false,
+  html: true,
   breaks: true,
 });
 
