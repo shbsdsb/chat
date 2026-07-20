@@ -36,22 +36,20 @@
         sandbox="allow-scripts"
         :src="blobUrl"
         class="preview-frame"
-        @load="onFrameLoad"
       />
       <iframe
         v-else
         ref="previewFrame"
         sandbox="allow-scripts"
-        :srcdoc="props.code"
+        :srcdoc="srcdocWithScript"
         class="preview-frame"
-        @load="onFrameLoad"
       />
     </div>
   </div>
 </template>
 
 <script setup>
-import { ref, computed, watch, onBeforeUnmount } from 'vue';
+import { ref, computed, watch, onMounted, onBeforeUnmount } from 'vue';
 import hljs from 'highlight.js';
 
 const props = defineProps({
@@ -62,13 +60,18 @@ const mode = ref('code');
 const previewFrame = ref(null);
 const frameHeight = ref('300px');
 
+// ── postMessage 高度上报脚本（注入到 iframe 内）─
+
+const HEIGHT_SCRIPT = '<script>(function(){function r(){parent.postMessage({t:"h",h:document.body.scrollHeight},"*")}new MutationObserver(r).observe(document.body,{childList:!0,subtree:!0,attributes:!0});addEventListener("load",r);if(document.readyState==="complete")r()})()<\/script>';
+
 // ── Blob URL 生命周期管理 ───────────────────────
 
 const blobUrl = ref(null);
 const useBlob = computed(() => props.code && props.code.length > 100 * 1024);
 
 function createBlobUrl(raw) {
-  const blob = new Blob([raw], { type: 'text/html' });
+  // 注入高度上报脚本后创建 blob
+  const blob = new Blob([HEIGHT_SCRIPT + raw], { type: 'text/html' });
   return URL.createObjectURL(blob);
 }
 
@@ -79,7 +82,10 @@ function revokeBlobUrl() {
   }
 }
 
-// code 变化时管理 blob URL 生命周期（副作用集中在 watch，computed 保持纯计算）
+// srcdoc 内容：注入高度上报脚本
+const srcdocWithScript = computed(() => HEIGHT_SCRIPT + props.code);
+
+// code 变化时管理 blob URL 生命周期
 watch(() => props.code, (raw) => {
   revokeBlobUrl();
   if (raw && useBlob.value) {
@@ -98,47 +104,17 @@ const highlightedHtml = computed(() => {
   }
 });
 
-// ── iframe 高度自适应 ────────────────────────────
+// ── iframe 高度自适应（postMessage 方案）───────
 
-let observer = null;
-
-function updateFrameHeight() {
-  try {
-    const body = previewFrame.value?.contentDocument?.body;
-    if (body) {
-      frameHeight.value = Math.max(body.scrollHeight, 100) + 'px';
-    }
-  } catch {
-    // 忽略跨域限制
+function onHeightMessage(e) {
+  if (e.data && e.data.t === 'h') {
+    frameHeight.value = Math.max(e.data.h, 100) + 'px';
   }
 }
 
-function onFrameLoad() {
-  if (!previewFrame.value) return;
-
-  // 清理旧的 observer
-  if (observer) observer.disconnect();
-
-  try {
-    const body = previewFrame.value.contentDocument?.body;
-    if (body) {
-      updateFrameHeight();
-
-      // MutationObserver 监听内容动态变化（JS 添加元素、展开折叠等）
-      observer = new MutationObserver(() => {
-        updateFrameHeight();
-      });
-      observer.observe(body, {
-        childList: true,
-        subtree: true,
-        attributes: true,
-        attributeFilter: ['style', 'class'],
-      });
-    }
-  } catch {
-    // 忽略
-  }
-}
+onMounted(() => {
+  window.addEventListener('message', onHeightMessage);
+});
 
 // ── 复制 ─────────────────────────────────────────
 
@@ -154,16 +130,14 @@ function onCopy(e) {
       copyIcon.style.display = '';
       checkIcon.style.display = 'none';
     }, 2000);
-  }).catch(() => {
-    // 剪贴板失败时静默处理，图标保持不变
-  });
+  }).catch(() => {});
 }
 
 // ── 清理 ─────────────────────────────────────────
 
 onBeforeUnmount(() => {
+  window.removeEventListener('message', onHeightMessage);
   revokeBlobUrl();
-  if (observer) observer.disconnect();
 });
 </script>
 

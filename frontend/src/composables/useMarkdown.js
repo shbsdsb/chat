@@ -19,7 +19,9 @@ function highlightCode(code, lang) {
 // ── Base64 编码（UTF-8 安全）────────────────────
 
 function toBase64(str) {
-  return btoa(unescape(encodeURIComponent(str)));
+  const bytes = new TextEncoder().encode(str);
+  const binStr = Array.from(bytes, b => String.fromCharCode(b)).join('');
+  return btoa(binStr);
 }
 
 const md = new MarkdownIt({

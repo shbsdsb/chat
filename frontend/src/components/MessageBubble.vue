@@ -65,7 +65,8 @@ function mountHtmlPreviews() {
 
     let code;
     try {
-      code = decodeURIComponent(escape(atob(base64)));
+      const bytes = Uint8Array.from(atob(base64), c => c.charCodeAt(0));
+      code = new TextDecoder().decode(bytes);
     } catch {
       code = '';
     }
@@ -123,7 +124,7 @@ function onBubbleClick(event) {
       btn.querySelector('.copy-icon').style.display = '';
       btn.querySelector('.check-icon').style.display = 'none';
     }, 2000);
-  });
+  }).catch(() => {});
 }
 </script>
 
