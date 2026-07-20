@@ -302,9 +302,9 @@ function onFrameLoad() {
 
 // ── 复制 ─────────────────────────────────────────
 
-function onCopy() {
+function onCopy(e) {
   navigator.clipboard.writeText(props.code).then(() => {
-    const btn = event.currentTarget;
+    const btn = e.currentTarget;
     btn.querySelector('.copy-icon').style.display = 'none';
     btn.querySelector('.check-icon').style.display = '';
     setTimeout(() => {
