@@ -111,6 +111,49 @@ function isInCodeBlock(content) {
   return matches.length % 2 === 1;
 }
 
+// ── HTML 检测 ──────────────────────────────────
+
+const BLOCK_TAGS = new Set([
+  'div', 'section', 'article', 'header', 'footer', 'nav', 'main', 'aside',
+  'table', 'form', 'fieldset', 'details', 'figure', 'ul', 'ol', 'dl'
+]);
+
+// stub: defined in Task 3, used by detectHtmlType
+function extractHtmlFragments(content) {
+  return [];
+}
+
+function getCodeBlockRanges(content) {
+  const ranges = [];
+  const re = /^```/gm;
+  let match;
+  while ((match = re.exec(content)) !== null) {
+    if (ranges.length > 0 && ranges[ranges.length - 1].end === undefined) {
+      ranges[ranges.length - 1].end = match.index;
+    } else {
+      ranges.push({ start: match.index });
+    }
+  }
+  if (ranges.length > 0 && ranges[ranges.length - 1].end === undefined) {
+    ranges[ranges.length - 1].end = content.length;
+  }
+  return ranges;
+}
+
+function isInsideCodeBlock(pos, ranges) {
+  return ranges.some(r => pos >= r.start && pos < r.end);
+}
+
+function detectHtmlType(content) {
+  const trimmed = content.trim();
+  if (!trimmed) return 'none';
+  if (/^<!DOCTYPE\s+html/i.test(trimmed) || /^<html[\s>]/i.test(trimmed)) {
+    return 'full';
+  }
+  const fragments = extractHtmlFragments(content);
+  return fragments.length > 0 ? 'mixed' : 'none';
+}
+
 // ── composable ───────────────────────────────────
 
 export function useMarkdown(contentRef) {
