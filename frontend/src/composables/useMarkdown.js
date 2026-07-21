@@ -232,6 +232,48 @@ function detectHtmlType(content) {
   return fragments.length > 0 ? 'mixed' : 'none';
 }
 
+// ── 嵌入式 HTML 文档检测 ──────────────────────
+
+const STRUCTURAL_MARKERS = /<(head|body|\/html)[\s>]/gi;
+const CONFIRMATION_WINDOW = 1000;
+
+function findEmbeddedHtmlDoc(content, codeBlockRanges) {
+  const re = /(^|\n)\s*(<!DOCTYPE\s+html|<html[\s>])/gim;
+  let match;
+  while ((match = re.exec(content)) !== null) {
+    const docStart = match.index + match[1].length; // 跳过前导换行
+    if (isInsideCodeBlock(docStart, codeBlockRanges)) continue;
+
+    // 结构确认（分级）：
+    // - <!DOCTYPE html> → 强信号，免确认
+    // - <html> → 需 ≥1 个结构标记在后续 1000 字符内
+    const matchedByDoctype = /^<!DOCTYPE\s+html/i.test(match[2]);
+    if (!matchedByDoctype) {
+      const windowEnd = Math.min(docStart + CONFIRMATION_WINDOW, content.length);
+      const ahead = content.slice(match.index, windowEnd);
+      const structuralMatches = [...ahead.matchAll(STRUCTURAL_MARKERS)];
+      if (structuralMatches.length < 1) continue; // 结构确认失败，跳过
+    }
+
+    // 找闭合 </html> — 使用第一个；未闭合则跳过（流式安全）
+    const closeRe = /<\/html\s*>/gi;
+    closeRe.lastIndex = docStart;
+    const closeMatch = closeRe.exec(content);
+    if (!closeMatch) continue; // 未闭合 → 不提取，走 none 路径
+    const docEnd = closeMatch.index + closeMatch[0].length;
+
+    // after 部分供 composable 递归走 splitMixed
+    const after = content.slice(docEnd).trimStart();
+
+    return {
+      before: content.slice(0, docStart).trimEnd(),
+      htmlDoc: content.slice(docStart, docEnd).trim(),
+      after,
+    };
+  }
+  return null;
+}
+
 // ── composable ───────────────────────────────────
 
 export function useMarkdown(contentRef) {
