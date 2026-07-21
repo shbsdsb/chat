@@ -1,6 +1,6 @@
 <template>
   <div class="html-preview-block">
-    <div class="preview-toolbar">
+    <div v-if="showToggle" class="preview-toolbar">
       <button
         :class="{ active: mode === 'code' }"
         @click="mode = 'code'"
@@ -54,9 +54,10 @@ import hljs from 'highlight.js';
 
 const props = defineProps({
   code: { type: String, required: true },
+  showToggle: { type: Boolean, default: true },
 });
 
-const mode = ref('code');
+const mode = ref(props.showToggle ? 'code' : 'preview');
 const previewFrame = ref(null);
 const frameHeight = ref('300px');
 
