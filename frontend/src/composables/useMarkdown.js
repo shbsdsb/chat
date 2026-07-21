@@ -118,10 +118,12 @@ const BLOCK_TAGS = new Set([
   'table', 'form', 'fieldset', 'details', 'figure', 'ul', 'ol', 'dl'
 ]);
 
+const BLOCK_TAGS_PATTERN = new RegExp(`<(${[...BLOCK_TAGS].join('|')})(\\s[^>]*)?>`, 'gi');
+
 function extractHtmlFragments(content) {
   const codeBlockRanges = getCodeBlockRanges(content);
   const fragments = [];
-  const tagPattern = /<(div|section|article|header|footer|nav|main|aside|table|form|fieldset|details|figure|ul|ol|dl)(\s[^>]*)?>/gi;
+  const tagPattern = BLOCK_TAGS_PATTERN;
 
   let match;
   while ((match = tagPattern.exec(content)) !== null) {
@@ -249,7 +251,13 @@ export function useMarkdown(contentRef) {
         return;
       }
 
-      const htmlType = detectHtmlType(content);
+      const htmlType = (() => {
+        try {
+          return detectHtmlType(content);
+        } catch {
+          return 'none';
+        }
+      })();
 
       // ── 完整 HTML 文档 ──
       if (htmlType === 'full') {
@@ -264,31 +272,35 @@ export function useMarkdown(contentRef) {
 
       // ── 混合内容 ──
       if (htmlType === 'mixed') {
-        const paragraphs = splitParagraphs(content);
-        if (paragraphs.length === 0) {
-          frozenHtmls.value = [];
-          liveHtml.value = '';
-          blocks.value = [];
-          return;
-        }
-
-        // 冻结段走 HTML 检测和分段
-        const frozenContent = paragraphs.slice(0, -1).join('\n\n');
-        const liveContent = paragraphs[paragraphs.length - 1] || '';
-
-        const mixedBlocks = splitMixed(frozenContent);
-        // 将 text block 的 content 渲染为 markdown HTML
-        const renderedBlocks = mixedBlocks.map(b => {
-          if (b.type === 'text') {
-            return { type: 'text', html: safeRender(b.content) };
+        try {
+          const paragraphs = splitParagraphs(content);
+          if (paragraphs.length === 0) {
+            frozenHtmls.value = [];
+            liveHtml.value = '';
+            blocks.value = [];
+            return;
           }
-          return b;
-        });
 
-        blocks.value = renderedBlocks;
-        frozenHtmls.value = [];
-        liveHtml.value = renderLive(liveContent, isInCodeBlock(liveContent));
-        return;
+          // 冻结段走 HTML 检测和分段
+          const frozenContent = paragraphs.slice(0, -1).join('\n\n');
+          const liveContent = paragraphs[paragraphs.length - 1] || '';
+
+          const mixedBlocks = splitMixed(frozenContent);
+          // 将 text block 的 content 渲染为 markdown HTML
+          const renderedBlocks = mixedBlocks.map(b => {
+            if (b.type === 'text') {
+              return { type: 'text', html: safeRender(b.content) };
+            }
+            return b;
+          });
+
+          blocks.value = renderedBlocks;
+          frozenHtmls.value = [];
+          liveHtml.value = renderLive(liveContent, isInCodeBlock(liveContent));
+          return;
+        } catch {
+          // Fall through to the none-mode (pure markdown) path below
+        }
       }
 
       // ── 纯文本 ──

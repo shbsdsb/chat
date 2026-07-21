@@ -37,13 +37,15 @@
 
         <!-- 混合 blocks 渲染 -->
         <template v-if="blocks.length > 0">
-          <template v-for="(block, i) in blocks" :key="i">
-            <div v-if="block.type === 'text'" v-html="block.html" class="bubble-text" />
-            <div v-else class="html-auto-block">
-              <HtmlPreview :code="block.code" :showToggle="false" />
-            </div>
-          </template>
-          <div v-if="liveHtml" v-html="liveHtml" class="bubble-text" />
+          <div @click="onBubbleClick">
+            <template v-for="(block, i) in blocks" :key="i">
+              <div v-if="block.type === 'text'" v-html="block.html" class="bubble-text" />
+              <div v-else class="html-auto-block">
+                <HtmlPreview :code="block.code" :showToggle="false" />
+              </div>
+            </template>
+            <div v-if="liveHtml" v-html="liveHtml" class="bubble-text" />
+          </div>
         </template>
 
         <!-- 纯文本：现有渲染 -->
