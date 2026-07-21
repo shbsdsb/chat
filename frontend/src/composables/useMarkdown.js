@@ -235,6 +235,8 @@ function detectHtmlType(content) {
 export function useMarkdown(contentRef) {
   const frozenHtmls = ref([]);
   const liveHtml = ref('');
+  const blocks = ref([]);
+  const isCompleteHtml = ref(false);
 
   watch(
     () => contentRef.value,
@@ -242,8 +244,56 @@ export function useMarkdown(contentRef) {
       if (!content) {
         frozenHtmls.value = [];
         liveHtml.value = '';
+        blocks.value = [];
+        isCompleteHtml.value = false;
         return;
       }
+
+      const htmlType = detectHtmlType(content);
+
+      // ── 完整 HTML 文档 ──
+      if (htmlType === 'full') {
+        frozenHtmls.value = [];
+        liveHtml.value = '';
+        blocks.value = [{ type: 'html', code: content }];
+        isCompleteHtml.value = true;
+        return;
+      }
+
+      isCompleteHtml.value = false;
+
+      // ── 混合内容 ──
+      if (htmlType === 'mixed') {
+        const paragraphs = splitParagraphs(content);
+        if (paragraphs.length === 0) {
+          frozenHtmls.value = [];
+          liveHtml.value = '';
+          blocks.value = [];
+          return;
+        }
+
+        // 冻结段走 HTML 检测和分段
+        const frozenContent = paragraphs.slice(0, -1).join('\n\n');
+        const liveContent = paragraphs[paragraphs.length - 1] || '';
+
+        const mixedBlocks = splitMixed(frozenContent);
+        // 将 text block 的 content 渲染为 markdown HTML
+        const renderedBlocks = mixedBlocks.map(b => {
+          if (b.type === 'text') {
+            return { type: 'text', html: safeRender(b.content) };
+          }
+          return b;
+        });
+
+        blocks.value = renderedBlocks;
+        frozenHtmls.value = [];
+        liveHtml.value = renderLive(liveContent, isInCodeBlock(liveContent));
+        return;
+      }
+
+      // ── 纯文本 ──
+      blocks.value = [];
+
       const paragraphs = splitParagraphs(content);
       if (paragraphs.length === 0) {
         frozenHtmls.value = [];
@@ -251,17 +301,14 @@ export function useMarkdown(contentRef) {
         return;
       }
 
-      // 冻结段：前面已闭合的段落
       const frozen = paragraphs.slice(0, -1);
       frozenHtmls.value = frozen.map(p => safeRender(p));
 
-      // 末尾段
       const last = paragraphs[paragraphs.length - 1];
-      const inBlock = isInCodeBlock(last);
-      liveHtml.value = renderLive(last, inBlock);
+      liveHtml.value = renderLive(last, isInCodeBlock(last));
     },
     { immediate: true }
   );
 
-  return { frozenHtmls, liveHtml };
+  return { frozenHtmls, liveHtml, blocks, isCompleteHtml };
 }
