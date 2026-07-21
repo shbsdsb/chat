@@ -106,6 +106,10 @@ chat/
 - **路径别名**：`@` → `frontend/src`（vite.config.js 中配置）。
 - **Electron**：主进程在 `electron/main.cjs`（CommonJS），预加载脚本 `preload.cjs`，`contextIsolation: true`。菜单根据系统语言自动选择中/英文。
 
+## Branch Rules
+- **禁止直接在 `main` 分支提交** — `.git/hooks/pre-commit` 已配置阻止 hook。
+- 所有开发在 `develop` 分支进行，`main` 仅通过 PR/MR 合并进入。
+
 ## Notes
 - 无 CI/CD 配置，无 linter 配置。
 - `.npmrc` 配置了淘宝镜像，CI 或非中文环境可能需要移除。
