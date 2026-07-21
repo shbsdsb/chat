@@ -13,6 +13,7 @@ export const useChatStore = defineStore("chat", {
     abortController: null,
     aiVersionIndex: 0,
     aiVersions: {},
+    editingMessageId: null,
   }),
 
   actions: {
@@ -152,6 +153,15 @@ export const useChatStore = defineStore("chat", {
         this.messages[idx] = updated;
         this.messages = this.messages.slice(0, idx + 1);
       }
+      this.editingMessageId = null;
+    },
+
+    enterEditMode(id) {
+      this.editingMessageId = id;
+    },
+
+    exitEditMode() {
+      this.editingMessageId = null;
     },
 
     replayMessage(id) {

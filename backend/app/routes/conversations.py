@@ -164,8 +164,8 @@ def edit_message(conv_id, msg_id):
     msg = get_message(msg_id, conv_id)
     if not msg:
         return fail(404, "消息不存在", request)
-    if msg["role"] != "user":
-        return fail(400, "只能编辑用户消息", request)
+    if msg["role"] not in ("user", "assistant"):
+        return fail(400, "只能编辑用户或助手消息", request)
 
     body = request.get_json(silent=True) or {}
     content = (body.get("content") or "").strip()

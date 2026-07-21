@@ -1,32 +1,48 @@
 <template>
   <div class="bubble-row" :class="message.role">
-    <div class="bubble">
-      <div
-        v-if="message.role === 'assistant' && message.reasoning_content"
-        class="reasoning-block"
-      >
-        <div class="reasoning-header" @click="reasoningOpen = !reasoningOpen">
-          <span class="reasoning-icon">{{ reasoningOpen ? '▼' : '▶' }}</span>
-          <span>思考过程</span>
-        </div>
-        <div v-show="reasoningOpen" class="reasoning-content">
-          {{ message.reasoning_content }}
-        </div>
-      </div>
-      <div
-        v-if="message.role === 'assistant'"
-        ref="bubbleTextRef"
-        class="bubble-text"
-        @click="onBubbleClick"
-      >
+    <!-- 编辑工具栏 -->
+    <div v-if="isEditing" class="edit-toolbar">
+      <button class="edit-btn save-btn" title="保存" @click="handleSave">✓</button>
+      <button class="edit-btn cancel-btn" title="取消" @click="handleCancel">✗</button>
+    </div>
+    <div class="bubble" :class="{ 'bubble-editing': isEditing }">
+      <!-- 编辑模式：原始文本输入框 -->
+      <textarea
+        v-if="isEditing"
+        ref="editTextareaRef"
+        v-model="editContent"
+        class="edit-textarea"
+        rows="6"
+      />
+      <!-- 正常显示模式 -->
+      <template v-else>
         <div
-          v-for="(html, index) in frozenHtmls"
-          :key="index"
-          v-html="html"
-        />
-        <div v-html="liveHtml" />
-      </div>
-      <div v-else class="bubble-text">{{ message.content }}</div>
+          v-if="message.role === 'assistant' && message.reasoning_content"
+          class="reasoning-block"
+        >
+          <div class="reasoning-header" @click="reasoningOpen = !reasoningOpen">
+            <span class="reasoning-icon">{{ reasoningOpen ? '▼' : '▶' }}</span>
+            <span>思考过程</span>
+          </div>
+          <div v-show="reasoningOpen" class="reasoning-content">
+            {{ message.reasoning_content }}
+          </div>
+        </div>
+        <div
+          v-if="message.role === 'assistant'"
+          ref="bubbleTextRef"
+          class="bubble-text"
+          @click="onBubbleClick"
+        >
+          <div
+            v-for="(html, index) in frozenHtmls"
+            :key="index"
+            v-html="html"
+          />
+          <div v-html="liveHtml" />
+        </div>
+        <div v-else class="bubble-text">{{ message.content }}</div>
+      </template>
     </div>
   </div>
 </template>
@@ -34,16 +50,48 @@
 <script setup>
 import { ref, computed, watch, onMounted, onBeforeUnmount, nextTick, createApp } from "vue";
 import { useMarkdown } from "@/composables/useMarkdown.js";
+import { useChatStore } from "@/stores/chat";
 import HtmlPreview from "@/components/HtmlPreview.vue";
 
 const props = defineProps({
   message: { type: Object, required: true },
 });
 
+const chatStore = useChatStore();
 const reasoningOpen = ref(true);
 
 const content = computed(() => props.message.content);
 const { frozenHtmls, liveHtml } = useMarkdown(content);
+
+// ── 编辑模式 ─────────────────────────────────
+
+const isEditing = computed(() => chatStore.editingMessageId === props.message.id);
+const editContent = ref("");
+const editTextareaRef = ref(null);
+
+watch(isEditing, (val) => {
+  if (val) {
+    editContent.value = props.message.content;
+    nextTick(() => {
+      const ta = editTextareaRef.value;
+      if (ta) {
+        ta.style.height = "auto";
+        ta.style.height = ta.scrollHeight + "px";
+        ta.focus();
+      }
+    });
+  }
+});
+
+function handleSave() {
+  const trimmed = editContent.value.trim();
+  if (!trimmed) return;
+  chatStore.editMessage(props.message.id, trimmed);
+}
+
+function handleCancel() {
+  chatStore.exitEditMode();
+}
 
 // ── HtmlPreview 增量挂载 ────────────────────────
 
@@ -131,13 +179,14 @@ function onBubbleClick(event) {
 <style scoped>
 .bubble-row {
   display: flex;
+  flex-direction: column;
   margin-bottom: 12px;
 }
 .bubble-row.user {
-  justify-content: flex-end;
+  align-items: flex-end;
 }
 .bubble-row.assistant {
-  justify-content: flex-start;
+  align-items: flex-start;
 }
 
 .bubble {
@@ -157,6 +206,70 @@ function onBubbleClick(event) {
 }
 .bubble-row.assistant .bubble {
   border-color: #e8e8e8;
+}
+
+/* ── 编辑模式 ───────────────────────────────── */
+
+.bubble-editing {
+  width: 100%;
+  padding: 0;
+  border-color: #4a90d9;
+  box-shadow: 0 0 0 2px rgba(74, 144, 217, 0.15);
+}
+
+.edit-toolbar {
+  display: flex;
+  gap: 6px;
+  margin-bottom: 6px;
+}
+
+.edit-btn {
+  width: 30px;
+  height: 30px;
+  border: 1px solid #d0d0d0;
+  border-radius: 6px;
+  font-size: 15px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.15s;
+}
+
+.save-btn {
+  background: #4a90d9;
+  color: #fff;
+  border-color: #4a90d9;
+}
+.save-btn:hover {
+  background: #3a7bc8;
+  border-color: #3a7bc8;
+}
+
+.cancel-btn {
+  background: #fff;
+  color: #888;
+}
+.cancel-btn:hover {
+  background: #f5f5f5;
+  color: #555;
+}
+
+.edit-textarea {
+  width: 100%;
+  min-width: 420px;
+  min-height: 120px;
+  padding: 16px;
+  border: none;
+  border-radius: 12px;
+  font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
+  font-size: 14px;
+  line-height: 1.6;
+  color: #333;
+  background: #fafbfc;
+  resize: vertical;
+  outline: none;
+  box-sizing: border-box;
 }
 
 .bubble-text {

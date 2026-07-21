@@ -36,12 +36,7 @@ function isLastAssistant(msg) {
 }
 
 function handleEdit(id) {
-  const msg = chatStore.messages.find((m) => m.id === id);
-  if (!msg) return;
-  const newContent = prompt("编辑消息", msg.content);
-  if (newContent !== null && newContent.trim()) {
-    chatStore.editMessage(id, newContent.trim());
-  }
+  chatStore.enterEditMode(id);
 }
 
 function handleReplay(id) {
