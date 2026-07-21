@@ -118,9 +118,85 @@ const BLOCK_TAGS = new Set([
   'table', 'form', 'fieldset', 'details', 'figure', 'ul', 'ol', 'dl'
 ]);
 
-// stub: defined in Task 3, used by detectHtmlType
 function extractHtmlFragments(content) {
-  return [];
+  const codeBlockRanges = getCodeBlockRanges(content);
+  const fragments = [];
+  const tagPattern = /<(div|section|article|header|footer|nav|main|aside|table|form|fieldset|details|figure|ul|ol|dl)(\s[^>]*)?>/gi;
+
+  let match;
+  while ((match = tagPattern.exec(content)) !== null) {
+    const tagName = match[1].toLowerCase();
+    if (isInsideCodeBlock(match.index, codeBlockRanges)) continue;
+
+    const openTagLen = match[0].length;
+
+    // 用深度计数找匹配的闭合标签
+    let depth = 1;
+    let searchPos = match.index + openTagLen;
+    const tagRe = new RegExp(`<\\/?${tagName}[\\s>]`, 'gi');
+    tagRe.lastIndex = searchPos;
+
+    let closeMatchEnd = -1;
+    let innerMatch;
+    while ((innerMatch = tagRe.exec(content)) !== null) {
+      if (isInsideCodeBlock(innerMatch.index, codeBlockRanges)) continue;
+      if (content[innerMatch.index + 1] === '/') {
+        depth--;
+        if (depth === 0) {
+          const gt = content.indexOf('>', innerMatch.index);
+          closeMatchEnd = gt !== -1 ? gt + 1 : innerMatch.index + innerMatch[0].length;
+          break;
+        }
+      } else {
+        depth++;
+      }
+    }
+
+    if (closeMatchEnd === -1) continue;
+
+    const htmlCode = content.slice(match.index, closeMatchEnd);
+
+    // 质量门槛：≥ 100 字符 或 包含嵌套子标签
+    if (htmlCode.length < 100) {
+      const inner = htmlCode.slice(openTagLen, htmlCode.length - (closeMatchEnd - innerMatch.index));
+      if (!/<(\w+)[\s>]/i.test(inner)) continue;
+    }
+
+    fragments.push({ start: match.index, end: closeMatchEnd, code: htmlCode });
+  }
+
+  // 排序并移除重叠片段
+  fragments.sort((a, b) => a.start - b.start);
+  const filtered = [];
+  let lastEnd = 0;
+  for (const f of fragments) {
+    if (f.start >= lastEnd) {
+      filtered.push(f);
+      lastEnd = f.end;
+    }
+  }
+  return filtered;
+}
+
+function splitMixed(content) {
+  const fragments = extractHtmlFragments(content);
+  if (fragments.length === 0) {
+    return [{ type: 'text', content }];
+  }
+
+  const blocks = [];
+  let pos = 0;
+  for (const frag of fragments) {
+    if (frag.start > pos) {
+      blocks.push({ type: 'text', content: content.slice(pos, frag.start) });
+    }
+    blocks.push({ type: 'html', code: frag.code });
+    pos = frag.end;
+  }
+  if (pos < content.length) {
+    blocks.push({ type: 'text', content: content.slice(pos) });
+  }
+  return blocks;
 }
 
 function getCodeBlockRanges(content) {
