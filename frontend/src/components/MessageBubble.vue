@@ -5,7 +5,13 @@
       <button class="edit-btn save-btn" title="保存" @click="handleSave">✓</button>
       <button class="edit-btn cancel-btn" title="取消" @click="handleCancel">✗</button>
     </div>
-    <div class="bubble" :class="{ 'bubble-editing': isEditing }">
+
+    <!-- 完整 HTML 文档 -->
+    <div v-if="isCompleteHtml && blocks.length === 1" class="bubble bubble-html" style="width:100%;padding:0">
+      <HtmlPreview :code="blocks[0].code" :showToggle="false" />
+    </div>
+
+    <div v-else class="bubble" :class="{ 'bubble-editing': isEditing }">
       <!-- 编辑模式：原始文本输入框 -->
       <textarea
         v-if="isEditing"
@@ -28,20 +34,35 @@
             {{ message.reasoning_content }}
           </div>
         </div>
-        <div
-          v-if="message.role === 'assistant'"
-          ref="bubbleTextRef"
-          class="bubble-text"
-          @click="onBubbleClick"
-        >
+
+        <!-- 混合 blocks 渲染 -->
+        <template v-if="blocks.length > 0">
+          <template v-for="(block, i) in blocks" :key="i">
+            <div v-if="block.type === 'text'" v-html="block.html" class="bubble-text" />
+            <div v-else class="html-auto-block">
+              <HtmlPreview :code="block.code" :showToggle="false" />
+            </div>
+          </template>
+          <div v-if="liveHtml" v-html="liveHtml" class="bubble-text" />
+        </template>
+
+        <!-- 纯文本：现有渲染 -->
+        <template v-else>
           <div
-            v-for="(html, index) in frozenHtmls"
-            :key="index"
-            v-html="html"
-          />
-          <div v-html="liveHtml" />
-        </div>
-        <div v-else class="bubble-text">{{ message.content }}</div>
+            v-if="message.role === 'assistant'"
+            ref="bubbleTextRef"
+            class="bubble-text"
+            @click="onBubbleClick"
+          >
+            <div
+              v-for="(html, index) in frozenHtmls"
+              :key="index"
+              v-html="html"
+            />
+            <div v-html="liveHtml" />
+          </div>
+          <div v-else class="bubble-text">{{ message.content }}</div>
+        </template>
       </template>
     </div>
   </div>
@@ -61,7 +82,7 @@ const chatStore = useChatStore();
 const reasoningOpen = ref(true);
 
 const content = computed(() => props.message.content);
-const { frozenHtmls, liveHtml } = useMarkdown(content);
+const { frozenHtmls, liveHtml, blocks, isCompleteHtml } = useMarkdown(content);
 
 // ── 编辑模式 ─────────────────────────────────
 
@@ -403,6 +424,10 @@ function onBubbleClick(event) {
 /* ── HtmlPreview 容器 ──────────────────────────── */
 
 .bubble-text :deep(.html-preview-container) {
+  margin: 8px 0;
+}
+
+.html-auto-block {
   margin: 8px 0;
 }
 </style>
