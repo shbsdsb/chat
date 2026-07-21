@@ -312,6 +312,49 @@ export function useMarkdown(contentRef) {
 
       isCompleteHtml.value = false;
 
+      // ── 嵌入式 HTML 文档 ──
+      const embedded = findEmbeddedHtmlDoc(content, getCodeBlockRanges(content));
+      if (embedded) {
+        frozenHtmls.value = [];
+        liveHtml.value = '';
+        blocks.value = [];
+        isCompleteHtml.value = false;
+
+        const rendered = [];
+
+        // before 文本 → markdown 渲染
+        if (embedded.before) {
+          rendered.push({ type: 'text', html: safeRender(embedded.before) });
+        }
+
+        // HTML 文档 → iframe 渲染
+        try {
+          rendered.push({ type: 'html', code: embedded.htmlDoc });
+        } catch {
+          // HTML 文档本身有问题，降级为 markdown
+          rendered.push({ type: 'text', html: safeRender(embedded.htmlDoc) });
+        }
+
+        // after 部分递归走 splitMixed 捕获残留 HTML 片段
+        try {
+          const afterBlocks = splitMixed(embedded.after);
+          for (const b of afterBlocks) {
+            if (b.type === 'text') {
+              if (b.content.trim()) rendered.push({ type: 'text', html: safeRender(b.content) });
+            } else {
+              rendered.push(b);
+            }
+          }
+        } catch {
+          if (embedded.after.trim()) {
+            rendered.push({ type: 'text', html: safeRender(embedded.after) });
+          }
+        }
+
+        blocks.value = rendered;
+        return;
+      }
+
       // ── 混合内容 ──
       if (htmlType === 'mixed') {
         try {
