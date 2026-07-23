@@ -3,7 +3,7 @@ import requests
 
 
 def stream_chat(api_url, api_key, model, messages, response_format, cancel_event,
-               temperature=None, max_tokens=None):
+               temperature=None, max_tokens=None, top_p=None):
     url = api_url.rstrip("/") + "/chat/completions"
     headers = {
         "Content-Type": "application/json",
@@ -20,6 +20,8 @@ def stream_chat(api_url, api_key, model, messages, response_format, cancel_event
         payload["temperature"] = temperature
     if max_tokens is not None:
         payload["max_tokens"] = max_tokens
+    if top_p is not None:
+        payload["top_p"] = top_p
 
     try:
         resp = requests.post(

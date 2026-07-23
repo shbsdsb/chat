@@ -24,7 +24,8 @@ def _conv_to_dict(row):
     return row
 
 
-def _stream_and_save(settings, messages, conv_id, cancel_event):
+def _stream_and_save(settings, messages, conv_id, cancel_event,
+                     temperature=None, max_tokens=None, top_p=None):
     """Shared SSE generator: stream AI response, save assistant message, unregister."""
 
     full_content = ""
@@ -40,8 +41,9 @@ def _stream_and_save(settings, messages, conv_id, cancel_event):
             messages,
             settings.get("response_format", ""),
             cancel_event,
-            settings.get("temperature"),
-            settings.get("max_tokens"),
+            temperature,
+            max_tokens,
+            top_p,
         ):
             if "error" in chunk:
                 yield f"data: {json.dumps({'error': chunk['error']})}\n\n"
@@ -126,6 +128,11 @@ def chat(conv_id):
     if not content:
         return fail(400, "消息内容不能为空", request)
 
+    # 从请求体读取参数预设值
+    temperature = body.get("temperature")
+    max_tokens = body.get("max_tokens")
+    top_p = body.get("top_p")
+
     now = datetime.now(timezone.utc).isoformat()
 
     user_msg_id = str(uuid.uuid4())
@@ -146,7 +153,8 @@ def chat(conv_id):
     cancel_event = sse_manager.register(conv_id)
 
     return Response(
-        stream_with_context(_stream_and_save(settings, messages, conv_id, cancel_event)),
+        stream_with_context(_stream_and_save(settings, messages, conv_id, cancel_event,
+                                             temperature=temperature, max_tokens=max_tokens, top_p=top_p)),
         mimetype="text/event-stream",
         headers={
             "Cache-Control": "no-cache",
@@ -193,6 +201,11 @@ def regenerate(conv_id):
     if not last_assistant_id:
         return fail(400, "没有可重新生成的 AI 回复", request)
 
+    body = request.get_json(silent=True) or {}
+    temperature = body.get("temperature")
+    max_tokens = body.get("max_tokens")
+    top_p = body.get("top_p")
+
     delete_message(last_assistant_id, conv_id)
 
     messages = get_messages_for_chat(conv_id)
@@ -200,7 +213,8 @@ def regenerate(conv_id):
     cancel_event = sse_manager.register(conv_id)
 
     return Response(
-        stream_with_context(_stream_and_save(settings, messages, conv_id, cancel_event)),
+        stream_with_context(_stream_and_save(settings, messages, conv_id, cancel_event,
+                                             temperature=temperature, max_tokens=max_tokens, top_p=top_p)),
         mimetype="text/event-stream",
         headers={
             "Cache-Control": "no-cache",
