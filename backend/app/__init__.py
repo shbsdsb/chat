@@ -38,5 +38,7 @@ def create_app():
     # ── 首次启动初始化 ──────────────────────────────
     os.makedirs(os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), "user_data", "logs"), exist_ok=True)
     init_storage()  # 初始化 JSON 存储（幂等）
+    from app.storage.param_presets import init_param_presets
+    init_param_presets()  # 初始化参数预设存储（幂等）
 
     return flask_app
