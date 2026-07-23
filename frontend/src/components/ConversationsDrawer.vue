@@ -31,7 +31,7 @@
 </template>
 
 <script setup>
-import { ref } from "vue";
+import { useResizableDrawer } from "@/composables/useResizableDrawer";
 import { useChatStore } from "@/stores/chat";
 import ConversationItem from "@/components/ConversationItem.vue";
 
@@ -41,52 +41,20 @@ defineProps({
 defineEmits(["close"]);
 
 const chatStore = useChatStore();
-const drawerWidth = ref(280);
-const resizing = ref(false);
+const { width: drawerWidth, isResizing: resizing, startResize } = useResizableDrawer({
+  direction: "left",
+  minWidth: 220,
+  maxWidth: 500,
+  defaultWidth: 280,
+});
 
 function handleNewChat() {
   chatStore.createConversation();
 }
-
-function startResize(e) {
-  e.preventDefault();
-  resizing.value = true;
-  document.body.style.userSelect = "none";
-  document.body.style.cursor = "col-resize";
-
-  const startX = e.clientX;
-  const startW = drawerWidth.value;
-
-  function onMove(ev) {
-    const delta = ev.clientX - startX;
-    drawerWidth.value = Math.max(220, Math.min(500, startW + delta));
-  }
-
-  function onUp() {
-    resizing.value = false;
-    document.body.style.userSelect = "";
-    document.body.style.cursor = "";
-    document.removeEventListener("mousemove", onMove);
-    document.removeEventListener("mouseup", onUp);
-  }
-
-  document.addEventListener("mousemove", onMove);
-  document.addEventListener("mouseup", onUp);
-}
 </script>
 
 <style scoped>
-.drawer-panel {
-  width: 0;
-  overflow: hidden;
-  display: flex;
-  flex-shrink: 0;
-  transition: width 0.25s ease;
-  position: relative;
-}
-.drawer-panel.resizing {
-  transition: none;
-}
+@import "@/assets/drawer.css";
 
 .drawer-inner {
   flex: 1;
@@ -110,24 +78,6 @@ function startResize(e) {
   font-weight: 600;
   color: #333;
   white-space: nowrap;
-}
-
-.drawer-close {
-  width: 28px;
-  height: 28px;
-  border: 1px solid #d5d5d5;
-  border-radius: 6px;
-  background: #fff;
-  color: #888;
-  font-size: 14px;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
-}
-.drawer-close:hover {
-  background: #f0f0f0;
 }
 
 .drawer-body {
@@ -159,18 +109,5 @@ function startResize(e) {
   display: flex;
   flex-direction: column;
   gap: 2px;
-}
-
-.drawer-resizer {
-  width: 4px;
-  cursor: col-resize;
-  background: transparent;
-  flex-shrink: 0;
-  transition: background 0.15s;
-  user-select: none;
-}
-.drawer-resizer:hover,
-.drawer-resizer.active {
-  background: #d0d0d0;
 }
 </style>
