@@ -74,6 +74,9 @@ def update_param_preset_route(preset_id):
     body = request.get_json(silent=True) or {}
     name = (body.get("name") or row["name"]).strip()
 
+    if not name:
+        return fail(400, "name 不能为空", request)
+
     try:
         temperature = float(body.get("temperature", row["temperature"]))
         max_tokens = int(body.get("max_tokens", row["max_tokens"]))
