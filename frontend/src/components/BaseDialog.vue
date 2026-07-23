@@ -60,7 +60,7 @@ defineEmits(['close']);
 
 .dialog-actions {
   display: flex;
-  justify-content: flex-end;
+  justify-content: center;
   gap: 10px;
 }
 
@@ -125,7 +125,9 @@ defineEmits(['close']);
 
 /* 危险弹窗样式 */
 :deep(.dialog-danger) {
-  width: 360px;
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
   text-align: center;
 }
 
@@ -139,5 +141,7 @@ defineEmits(['close']);
   color: #555;
   line-height: 1.6;
   margin: 0;
+  word-break: break-word;
+  overflow-wrap: break-word;
 }
 </style>

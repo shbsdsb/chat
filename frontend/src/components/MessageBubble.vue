@@ -1,73 +1,76 @@
 <template>
-  <div class="bubble-row" :class="message.role">
-    <!-- 编辑工具栏 -->
-    <div v-if="isEditing" class="edit-toolbar">
-      <button class="edit-btn save-btn" title="保存" @click="handleSave">✓</button>
-      <button class="edit-btn cancel-btn" title="取消" @click="handleCancel">✗</button>
-    </div>
-
-    <!-- 完整 HTML 文档 -->
-    <div v-if="isCompleteHtml && blocks.length === 1" class="bubble bubble-html" style="width:100%;padding:0">
-      <HtmlPreview :code="blocks[0].code" :showToggle="false" />
-    </div>
-
-    <div v-else class="bubble" :class="{ 'bubble-editing': isEditing }">
-      <!-- 编辑模式：原始文本输入框 -->
-      <textarea
-        v-if="isEditing"
-        ref="editTextareaRef"
-        v-model="editContent"
-        class="edit-textarea"
-        rows="6"
-      />
-      <!-- 正常显示模式 -->
-      <template v-else>
-        <div
-          v-if="message.role === 'assistant' && message.reasoning_content"
-          class="reasoning-block"
-        >
-          <div class="reasoning-header" @click="reasoningOpen = !reasoningOpen">
-            <span class="reasoning-icon">{{ reasoningOpen ? '▼' : '▶' }}</span>
-            <span>思考过程</span>
-          </div>
-          <div v-show="reasoningOpen" class="reasoning-content">
-            {{ message.reasoning_content }}
-          </div>
+    <div class="bubble-row" :class="message.role">
+        <!-- 编辑工具栏 -->
+        <div v-if="isEditing" class="edit-toolbar">
+            <button class="edit-btn save-btn" title="保存" @click="handleSave">✓</button>
+            <button class="edit-btn cancel-btn" title="取消" @click="handleCancel">✗</button>
         </div>
 
-        <!-- 混合 blocks 渲染 -->
-        <template v-if="blocks.length > 0">
-          <div @click="onBubbleClick">
-            <template v-for="(block, i) in blocks" :key="i">
-              <div v-if="block.type === 'text'" v-html="block.html" class="bubble-text" />
-              <div v-else class="html-auto-block">
-                <HtmlPreview :code="block.code" :showToggle="false" />
-              </div>
-            </template>
-            <div v-if="liveHtml" v-html="liveHtml" class="bubble-text" />
-          </div>
-        </template>
+        <!-- 完整 HTML 文档 -->
+        <div v-if="isCompleteHtml && blocks.length === 1" class="bubble bubble-html" style="width:100%;padding:0">
+            <div v-if="message.role === 'assistant' && message.reasoning_content"
+                 class="reasoning-block"
+                 style="padding: 12px 16px 0;">
+                <div class="reasoning-header" @click="reasoningOpen = !reasoningOpen">
+                    <span class="reasoning-icon">{{ reasoningOpen ? '▼' : '▶' }}</span>
+                    <span>思考过程</span>
+                </div>
+                <div v-show="reasoningOpen" class="reasoning-content">
+                    {{ message.reasoning_content }}
+                </div>
+            </div>
+            <HtmlPreview :code="blocks[0].code" :showToggle="false" />
+        </div>
 
-        <!-- 纯文本：现有渲染 -->
-        <template v-else>
-          <div
-            v-if="message.role === 'assistant'"
-            ref="bubbleTextRef"
-            class="bubble-text"
-            @click="onBubbleClick"
-          >
-            <div
-              v-for="(html, index) in frozenHtmls"
-              :key="index"
-              v-html="html"
-            />
-            <div v-html="liveHtml" />
-          </div>
-          <div v-else class="bubble-text">{{ message.content }}</div>
-        </template>
-      </template>
+        <div v-else class="bubble" :class="{ 'bubble-editing': isEditing }">
+            <!-- 编辑模式：原始文本输入框 -->
+            <textarea v-if="isEditing"
+                      ref="editTextareaRef"
+                      v-model="editContent"
+                      class="edit-textarea"
+                      rows="6" />
+            <!-- 正常显示模式 -->
+            <template v-else>
+                <div v-if="message.role === 'assistant' && message.reasoning_content"
+                     class="reasoning-block">
+                    <div class="reasoning-header" @click="reasoningOpen = !reasoningOpen">
+                        <span class="reasoning-icon">{{ reasoningOpen ? '▼' : '▶' }}</span>
+                        <span>思考过程</span>
+                    </div>
+                    <div v-show="reasoningOpen" class="reasoning-content">
+                        {{ message.reasoning_content }}
+                    </div>
+                </div>
+
+                <!-- 混合 blocks 渲染 -->
+                <template v-if="blocks.length > 0">
+                    <div @click="onBubbleClick">
+                        <template v-for="(block, i) in blocks" :key="i">
+                            <div v-if="block.type === 'text'" v-html="block.html" class="bubble-text" />
+                            <div v-else class="html-auto-block">
+                                <HtmlPreview :code="block.code" :showToggle="false" />
+                            </div>
+                        </template>
+                        <div v-if="liveHtml" v-html="liveHtml" class="bubble-text" />
+                    </div>
+                </template>
+
+                <!-- 纯文本：现有渲染 -->
+                <template v-else>
+                    <div v-if="message.role === 'assistant'"
+                         ref="bubbleTextRef"
+                         class="bubble-text"
+                         @click="onBubbleClick">
+                        <div v-for="(html, index) in frozenHtmls"
+                             :key="index"
+                             v-html="html" />
+                        <div v-html="liveHtml" />
+                    </div>
+                    <div v-else class="bubble-text">{{ message.content }}</div>
+                </template>
+            </template>
+        </div>
     </div>
-  </div>
 </template>
 
 <script setup>

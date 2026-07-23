@@ -109,6 +109,7 @@ chat/
 ## Branch Rules
 - **禁止直接在 `main` 分支提交** — `.git/hooks/pre-commit` 已配置阻止 hook。
 - 所有开发在 `develop` 分支进行，`main` 仅通过 PR/MR 合并进入。
+- 当没有`develop`分支时，但需要进行提交时，需要向用户确认是否创建。
 
 ## Notes
 - 无 CI/CD 配置，无 linter 配置。
