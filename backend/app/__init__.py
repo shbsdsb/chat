@@ -32,6 +32,7 @@ def create_app():
     import app.routes.example   # noqa — 必须在 register 前导入，注册 /api/hello
     import app.routes.settings      # noqa — 注册 /api/settings 系列路由
     import app.routes.conversations # noqa — 注册 /api/conversations 系列路由
+    import app.routes.param_presets  # noqa — 注册 /api/param-presets 系列路由
 
     flask_app.register_blueprint(api_bp, url_prefix="/api")
 
