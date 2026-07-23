@@ -4,6 +4,20 @@ import { sse } from "@/api/sse";
 
 const NEW_CONV = "__new__";
 
+// ── 工具函数 ────────────────────────────────────
+function sortByLastMessage(convs) {
+  convs.sort((a, b) => (b.lastMessageAt || "").localeCompare(a.lastMessageAt || ""));
+}
+
+function applyChunk(msg, chunk) {
+  if (chunk.reasoning_delta) {
+    msg.reasoning_content = (msg.reasoning_content || "") + chunk.reasoning_delta;
+  }
+  if (chunk.delta) {
+    msg.content = (msg.content || "") + chunk.delta;
+  }
+}
+
 export const useChatStore = defineStore("chat", {
   state: () => ({
     conversations: [],
@@ -22,7 +36,7 @@ export const useChatStore = defineStore("chat", {
       this.conversations.forEach((c) => {
         c.lastMessageAt = c.updated_at;
       });
-      this.conversations.sort((a, b) => (b.lastMessageAt || "").localeCompare(a.lastMessageAt || ""));
+      sortByLastMessage(this.conversations);
     },
 
     // 进入空白对话页，不创建后端记录
@@ -73,14 +87,14 @@ export const useChatStore = defineStore("chat", {
         conv.lastMessageAt = new Date().toISOString();
         this.activeConvId = conv.id;
         this.conversations.unshift(conv);
-        this.conversations.sort((a, b) => (b.lastMessageAt || "").localeCompare(a.lastMessageAt || ""));
+        sortByLastMessage(this.conversations);
       } else {
         const now = new Date().toISOString();
         const idx = this.conversations.findIndex((c) => c.id === this.activeConvId);
         if (idx !== -1) {
           this.conversations[idx].lastMessageAt = now;
         }
-        this.conversations.sort((a, b) => (b.lastMessageAt || "").localeCompare(a.lastMessageAt || ""));
+        sortByLastMessage(this.conversations);
       }
 
       const userMsg = {
@@ -109,17 +123,9 @@ export const useChatStore = defineStore("chat", {
             this.isStreaming = false;
             return;
           }
-          if (chunk.reasoning_delta) {
-            const last = this.messages[this.messages.length - 1];
-            if (last && last.role === "assistant") {
-              last.reasoning_content += chunk.reasoning_delta;
-            }
-          }
-          if (chunk.delta) {
-            const last = this.messages[this.messages.length - 1];
-            if (last && last.role === "assistant") {
-              last.content += chunk.delta;
-            }
+          const last = this.messages[this.messages.length - 1];
+          if (last && last.role === "assistant") {
+            applyChunk(last, chunk);
           }
           if (chunk.done) {
             this.isStreaming = false;

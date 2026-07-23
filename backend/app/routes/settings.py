@@ -7,6 +7,7 @@ from app.storage import (
     update_setting, delete_setting, get_default_setting, set_default_setting,
 )
 from app.utils.response import ok, fail
+from app.services.http_client import api_get
 import requests
 
 
@@ -164,14 +165,11 @@ def fetch_models():
     url = api_url.rstrip("/") + "/models"
     headers = {"Authorization": f"Bearer {api_key}"} if api_key else {}
 
-    try:
-        resp = requests.get(url, headers=headers, timeout=30)
-        resp.raise_for_status()
-        data = resp.json()
-        models = [m.get("id", "") for m in data.get("data", [])]
-        return ok(data=models)
-    except requests.RequestException as e:
-        return fail(502, f"获取模型列表失败: {e}", request)
+    data, error = api_get(url, headers={"Authorization": f"Bearer {api_key}"} if api_key else {})
+    if error:
+        return fail(502, f"获取模型列表失败: {error}", request)
+    models = [m.get("id", "") for m in data.get("data", [])]
+    return ok(data=models)
 
 
 @api_bp.route("/settings/<setting_id>/default", methods=["PUT"])
