@@ -1,6 +1,7 @@
 import { defineStore } from "pinia";
 import * as conversationsApi from "@/api/conversations";
 import { sse } from "@/api/sse";
+import { useParamPresetsStore } from "@/stores/paramPresets";
 
 const NEW_CONV = "__new__";
 
@@ -75,6 +76,8 @@ export const useChatStore = defineStore("chat", {
     async sendMessage(content) {
       if (this.isStreaming) return;
 
+      const paramPresetsStore = useParamPresetsStore();
+
       // 无活跃会话 → 视为新对话
       if (!this.activeConvId) {
         this.activeConvId = NEW_CONV;
@@ -117,7 +120,12 @@ export const useChatStore = defineStore("chat", {
 
       const es = sse(`/conversations/${this.activeConvId}/chat`, {
         method: "POST",
-        body: JSON.stringify({ content }),
+        body: JSON.stringify({
+          content,
+          temperature: paramPresetsStore.temperature,
+          max_tokens: paramPresetsStore.maxTokens,
+          top_p: paramPresetsStore.topP,
+        }),
         onMessage: (chunk) => {
           if (chunk.stopped) {
             this.isStreaming = false;

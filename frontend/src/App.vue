@@ -6,6 +6,7 @@
         <span class="top-title">Chat</span>
       </div>
       <nav class="top-nav">
+        <button class="top-btn" @click="showParamPresets = !showParamPresets">预设</button>
         <button class="top-btn" @click="showSettings = !showSettings">API 设置</button>
       </nav>
     </header>
@@ -14,6 +15,10 @@
       <main class="main-area">
         <router-view />
       </main>
+      <SettingsDrawer :visible="showParamPresets" @close="showParamPresets = false">
+        <template #title>预设</template>
+        <ParamPresetSelector @saved="showParamPresets = false" />
+      </SettingsDrawer>
       <SettingsDrawer :visible="showSettings" @close="showSettings = false">
         <template #title>API 设置</template>
         <SettingsView @saved="showSettings = false" />
@@ -28,15 +33,20 @@ import { ref, onMounted } from "vue";
 import ConversationsDrawer from "@/components/ConversationsDrawer.vue";
 import SettingsDrawer from "@/components/SettingsDrawer.vue";
 import SettingsView from "@/views/SettingsView.vue";
+import ParamPresetSelector from "@/components/ParamPresetSelector.vue";
 import AlertDialog from "@/components/AlertDialog.vue";
 import { useChatStore } from "@/stores/chat";
+import { useParamPresetsStore } from "@/stores/paramPresets";
 
 const chatStore = useChatStore();
+const paramPresetsStore = useParamPresetsStore();
 const showConversations = ref(false);
 const showSettings = ref(false);
+const showParamPresets = ref(false);
 
 onMounted(() => {
   chatStore.loadConversations();
+  paramPresetsStore.loadPresets();
 });
 </script>
 
