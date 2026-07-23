@@ -191,9 +191,15 @@ export const useChatStore = defineStore("chat", {
       const newContent = { value: "" };
       const newReasoning = { value: "" };
 
+      const paramPresetsStore = useParamPresetsStore();
+
       const es = sse(`/conversations/${this.activeConvId}/regenerate`, {
         method: "POST",
-        body: JSON.stringify({}),
+        body: JSON.stringify({
+          temperature: paramPresetsStore.temperature,
+          max_tokens: paramPresetsStore.maxTokens,
+          top_p: paramPresetsStore.topP,
+        }),
         onMessage: (chunk) => {
           if (chunk.stopped) {
             this.isStreaming = false;
