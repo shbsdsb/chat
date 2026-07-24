@@ -121,15 +121,21 @@ export const useCssPresetsStore = defineStore("cssPresets", {
         styleEl.id = "custom-css";
         document.head.appendChild(styleEl);
       }
+      // 提取 @import 行，防止后续正则误伤 URL（如 @import url(https://...)）
+      const imports = [];
+      const withoutImports = css.replace(/@import\s+[^;]+;/g, (m) => {
+        imports.push(m);
+        return "";
+      });
       // 对每条 CSS 声明追加 !important，以覆盖 Vue scoped 的 [data-v-xxxx] 属性选择器
-      const processed = css.replace(
+      const processed = withoutImports.replace(
         /([\w-]+)\s*:\s*([^;{}]+?)(\s*[;}])/g,
         (match, prop, val, end) => {
-          if (match.startsWith("@") || /!important/.test(val)) return match;
+          if (/!important/.test(val)) return match;
           return `${prop}: ${val.trimEnd()} !important${end}`;
         }
       );
-      styleEl.textContent = processed;
+      styleEl.textContent = imports.join("\n") + processed;
     },
   },
 });

@@ -54,6 +54,15 @@
         </div>
       </div>
     </div>
+
+    <!-- 删除确认弹窗 -->
+    <BaseDialog :visible="showDeleteConfirm" title="删除预设" @close="showDeleteConfirm = false">
+      <p class="dialog-danger-msg">确定要删除预设「{{ store.activePreset?.name }}」吗？此操作不可撤销。</p>
+      <template #footer>
+        <button class="dialog-btn dialog-btn-cancel" @click="showDeleteConfirm = false">取消</button>
+        <button class="dialog-btn dialog-btn-danger" @click="confirmDelete">确定删除</button>
+      </template>
+    </BaseDialog>
   </div>
 </template>
 
@@ -61,6 +70,7 @@
 import { ref, watch, nextTick, computed } from "vue";
 import { useCssPresetsStore } from "@/stores/cssPresets";
 import { useAlertStore } from "@/stores/alert";
+import BaseDialog from "@/components/BaseDialog.vue";
 
 const store = useCssPresetsStore();
 const alert = useAlertStore();
@@ -114,9 +124,16 @@ async function handleDelete() {
     alert.show("不能删除默认CSS预设，请先切换默认预设", "error");
     return;
   }
+  showDeleteConfirm.value = true;
+}
+
+async function confirmDelete() {
+  const preset = store.activePreset;
+  if (!preset) return;
   try {
     await store.deletePreset(preset.id);
     liveContent.value = store.activeContent;
+    showDeleteConfirm.value = false;
     alert.show("已删除", "success");
   } catch (e) {
     alert.show(e.message || "删除失败", "error");
@@ -126,6 +143,7 @@ async function handleDelete() {
 // ── 重命名 ──────────────────────────────────
 
 const showRename = ref(false);
+const showDeleteConfirm = ref(false);
 const renameValue = ref("");
 const renameInputRef = ref(null);
 
