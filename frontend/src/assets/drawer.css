@@ -4,7 +4,7 @@
   overflow: hidden;
   display: flex;
   flex-shrink: 0;
-  transition: width 0.25s ease;
+  transition: width 0.2s ease;
   position: relative;
 }
 .drawer-panel.resizing {

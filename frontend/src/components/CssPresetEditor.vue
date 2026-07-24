@@ -1,112 +1,76 @@
 <template>
-  <div
-    class="drawer-panel"
-    :class="{ open: visible, resizing: resizing }"
-    :style="{ width: visible ? drawerWidth + 'px' : '0' }"
-  >
-    <div
-      class="drawer-resizer"
-      @mousedown="startResize"
-      :class="{ active: resizing }"
-    ></div>
-    <div class="drawer-inner">
-      <div class="drawer-header">
-        <h3>自定义 CSS</h3>
-        <button class="drawer-close" @click="$emit('close')">✕</button>
-      </div>
-      <div class="drawer-body">
-        <!-- 预设工具栏 -->
-        <div class="preset-toolbar">
-          <select
-            class="preset-select"
-            :value="store.activeId || ''"
-            @change="store.selectPreset($event.target.value)"
-          >
-            <option
-              v-for="p in store.presets"
-              :key="p.id"
-              :value="p.id"
-            >{{ p.name }}</option>
-          </select>
-          <button class="toolbar-btn" @click="handleRename" title="重命名">🖊</button>
-          <button class="toolbar-btn primary" @click="handleCreate" title="新建预设">＋ 新建</button>
-          <button class="toolbar-btn danger" @click="handleDelete" title="删除预设">🗑</button>
-        </div>
+  <div class="css-editor">
+    <!-- 预设工具栏 -->
+    <div class="preset-toolbar">
+      <select
+        class="preset-select"
+        :value="store.activeId || ''"
+        @change="store.selectPreset($event.target.value)"
+      >
+        <option
+          v-for="p in store.presets"
+          :key="p.id"
+          :value="p.id"
+        >{{ p.name }}</option>
+      </select>
+      <button class="toolbar-btn" @click="handleRename" title="重命名">🖊</button>
+      <button class="toolbar-btn primary" @click="handleCreate" title="新建预设">＋ 新建</button>
+      <button class="toolbar-btn danger" @click="handleDelete" title="删除预设">🗑</button>
+    </div>
 
-        <!-- CSS 编辑器 -->
-        <textarea
-          ref="textareaRef"
-          class="css-textarea"
-          :value="liveContent"
-          @input="onInput"
-          placeholder="/* 输入自定义 CSS */&#10;body {&#10;  background: #fff;&#10;}"
-          spellcheck="false"
-        ></textarea>
+    <!-- CSS 编辑器 -->
+    <textarea
+      ref="textareaRef"
+      class="css-textarea"
+      :value="liveContent"
+      @input="onInput"
+      placeholder="/* 输入自定义 CSS */&#10;body {&#10;  background: #fff;&#10;}"
+      spellcheck="false"
+    ></textarea>
 
-        <!-- 操作按钮 -->
-        <div class="footer-btns">
-          <button class="footer-btn" @click="handleReset" :disabled="liveContent === savedContent">↺ 重置</button>
-          <button
-            class="footer-btn save"
-            @click="handleSave"
-            :disabled="liveContent === savedContent"
-          >💾 保存</button>
-        </div>
-      </div>
+    <!-- 操作按钮 -->
+    <div class="footer-btns">
+      <button class="footer-btn" @click="handleReset" :disabled="liveContent === savedContent">↺ 重置</button>
+      <button
+        class="footer-btn save"
+        @click="handleSave"
+        :disabled="liveContent === savedContent"
+      >💾 保存</button>
     </div>
 
     <!-- 重命名弹窗 -->
-    <template v-if="showRename">
-      <div class="rename-overlay" @click.self="showRename = false">
-        <div class="rename-dialog">
-          <input
-            ref="renameInputRef"
-            v-model="renameValue"
-            @keydown.enter="confirmRename"
-            @keydown.escape="showRename = false"
-            placeholder="预设名称"
-          />
-          <div class="rename-btns">
-            <button @click="confirmRename">确定</button>
-            <button @click="showRename = false">取消</button>
-          </div>
+    <div v-if="showRename" class="rename-overlay" @click.self="showRename = false">
+      <div class="rename-dialog">
+        <input
+          ref="renameInputRef"
+          v-model="renameValue"
+          @keydown.enter="confirmRename"
+          @keydown.escape="showRename = false"
+          placeholder="预设名称"
+        />
+        <div class="rename-btns">
+          <button @click="confirmRename">确定</button>
+          <button @click="showRename = false">取消</button>
         </div>
       </div>
-    </template>
+    </div>
   </div>
 </template>
 
 <script setup>
 import { ref, watch, nextTick, computed } from "vue";
 import { useCssPresetsStore } from "@/stores/cssPresets";
-import { useResizableDrawer } from "@/composables/useResizableDrawer";
 import { useAlertStore } from "@/stores/alert";
-
-const props = defineProps({
-  visible: { type: Boolean, default: false },
-});
-const emit = defineEmits(["close"]);
 
 const store = useCssPresetsStore();
 const alert = useAlertStore();
 
-const { width: drawerWidth, isResizing: resizing, startResize } = useResizableDrawer({
-  direction: "right",
-  minWidth: 320,
-  maxWidth: 800,
-  defaultWidth: 480,
-});
-
-// ── 实时编辑状态 ──────────────────────────────
 const liveContent = ref("");
 const textareaRef = ref(null);
 
-// 抽屉打开或预设切换时，同步内容
 watch(
-  () => [props.visible, store.activeId],
-  () => {
-    liveContent.value = store.activeContent;
-  },
+  () => store.activeId,
+  () => { liveContent.value = store.activeContent; },
   { immediate: true }
 );
 
@@ -116,8 +80,6 @@ function onInput(e) {
   liveContent.value = e.target.value;
   store.updateLiveCss(e.target.value);
 }
-
-// ── 操作 ─────────────────────────────────────
 
 async function handleSave() {
   try {
@@ -188,49 +150,11 @@ async function confirmRename() {
 }
 </script>
 
-<style>
-@import "@/assets/drawer.css";
-</style>
-
 <style scoped>
-
-.drawer-inner {
-  flex: 1;
-  background: #fff;
-  border-left: 1px solid #e0e0e0;
+.css-editor {
   display: flex;
   flex-direction: column;
-  overflow: hidden;
-}
-
-.drawer-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 14px 20px;
-  border-bottom: 1px solid #e0e0e0;
-  flex-shrink: 0;
-}
-.drawer-header h3 {
-  font-size: 16px;
-  font-weight: 600;
-  color: #333;
-}
-.drawer-close {
-  border: none;
-  background: none;
-  font-size: 16px;
-  cursor: pointer;
-  color: #999;
-}
-.drawer-close:hover { color: #333; }
-
-.drawer-body {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  padding: 16px 20px;
-  overflow: hidden;
+  height: 100%;
 }
 
 /* 预设工具栏 */
@@ -278,12 +202,8 @@ async function confirmRename() {
   color: #d4d4d4;
   tab-size: 2;
 }
-.css-textarea:focus {
-  border-color: #4a90d9;
-}
-.css-textarea::placeholder {
-  color: #666;
-}
+.css-textarea:focus { border-color: #4a90d9; }
+.css-textarea::placeholder { color: #666; }
 
 /* 底部按钮 */
 .footer-btns {

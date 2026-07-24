@@ -6,9 +6,9 @@
         <span class="top-title">Chat</span>
       </div>
       <nav class="top-nav">
-        <CssPresetSelector @open-drawer="showCssDrawer = true" />
-        <button class="top-btn" @click="showParamPresets = !showParamPresets">预设</button>
-        <button class="top-btn" @click="showSettings = !showSettings">API 设置</button>
+        <CssPresetSelector @open-drawer="openDrawer('css')" />
+        <button class="top-btn" @click="toggleDrawer('presets')">预设</button>
+        <button class="top-btn" @click="toggleDrawer('api')">API 设置</button>
       </nav>
     </header>
     <div class="app-body">
@@ -16,28 +16,34 @@
       <main class="main-area">
         <router-view />
       </main>
-      <SettingsDrawer :visible="showParamPresets" @close="showParamPresets = false">
-        <template #title>预设</template>
-        <ParamPresetSelector @saved="showParamPresets = false" />
+      <SettingsDrawer
+        :visible="activeDrawer !== null"
+        @close="activeDrawer = null"
+      >
+        <template #title>
+          <Transition name="title-fade" mode="out-in">
+            <span :key="activeDrawer">{{ drawerTitle }}</span>
+          </Transition>
+        </template>
+        <Transition name="drawer-slide" mode="out-in">
+          <SettingsView v-if="activeDrawer === 'api'" key="api" @saved="activeDrawer = null" />
+          <ParamPresetSelector v-else-if="activeDrawer === 'presets'" key="presets" @saved="activeDrawer = null" />
+          <CssPresetEditor v-else-if="activeDrawer === 'css'" key="css" />
+        </Transition>
       </SettingsDrawer>
-      <SettingsDrawer :visible="showSettings" @close="showSettings = false">
-        <template #title>API 设置</template>
-        <SettingsView @saved="showSettings = false" />
-      </SettingsDrawer>
-      <CustomCssDrawer :visible="showCssDrawer" @close="showCssDrawer = false" />
     </div>
     <AlertDialog />
   </div>
 </template>
 
 <script setup>
-import { ref, onMounted } from "vue";
+import { ref, computed, onMounted } from "vue";
 import ConversationsDrawer from "@/components/ConversationsDrawer.vue";
 import SettingsDrawer from "@/components/SettingsDrawer.vue";
 import SettingsView from "@/views/SettingsView.vue";
 import ParamPresetSelector from "@/components/ParamPresetSelector.vue";
 import CssPresetSelector from "@/components/CssPresetSelector.vue";
-import CustomCssDrawer from "@/components/CustomCssDrawer.vue";
+import CssPresetEditor from "@/components/CssPresetEditor.vue";
 import AlertDialog from "@/components/AlertDialog.vue";
 import { useChatStore } from "@/stores/chat";
 import { useParamPresetsStore } from "@/stores/paramPresets";
@@ -47,9 +53,19 @@ const chatStore = useChatStore();
 const paramPresetsStore = useParamPresetsStore();
 const cssPresetsStore = useCssPresetsStore();
 const showConversations = ref(false);
-const showSettings = ref(false);
-const showParamPresets = ref(false);
-const showCssDrawer = ref(false);
+
+// 单状态互斥：三个设置抽屉共用一个 activeDrawer
+const activeDrawer = ref(null); // null | 'api' | 'presets' | 'css'
+
+const drawerTitles = { api: "API 设置", presets: "预设", css: "自定义 CSS" };
+const drawerTitle = computed(() => drawerTitles[activeDrawer.value] || "");
+
+function toggleDrawer(name) {
+  activeDrawer.value = activeDrawer.value === name ? null : name;
+}
+function openDrawer(name) {
+  activeDrawer.value = name;
+}
 
 onMounted(() => {
   chatStore.loadConversations();
@@ -131,5 +147,28 @@ html, body, #app {
   flex-direction: column;
   background: #fff;
   overflow: hidden;
+}
+
+/* ── 抽屉内容切换动画 ────────────────── */
+.drawer-slide-enter-active,
+.drawer-slide-leave-active {
+  transition: all 0.2s ease;
+}
+.drawer-slide-enter-from {
+  transform: translateX(60px);
+  opacity: 0;
+}
+.drawer-slide-leave-to {
+  transform: translateX(-40px);
+  opacity: 0;
+}
+
+.title-fade-enter-active,
+.title-fade-leave-active {
+  transition: opacity 0.15s ease;
+}
+.title-fade-enter-from,
+.title-fade-leave-to {
+  opacity: 0;
 }
 </style>
