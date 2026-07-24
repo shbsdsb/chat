@@ -6,7 +6,7 @@
         <span class="top-title">Chat</span>
       </div>
       <nav class="top-nav">
-        <CssPresetSelector @open-drawer="openDrawer('css')" />
+        <CssPresetSelector @open-drawer="toggleDrawer('css')" />
         <button class="top-btn" @click="toggleDrawer('presets')">预设</button>
         <button class="top-btn" @click="toggleDrawer('api')">API 设置</button>
       </nav>
@@ -62,9 +62,6 @@ const drawerTitle = computed(() => drawerTitles[activeDrawer.value] || "");
 
 function toggleDrawer(name) {
   activeDrawer.value = activeDrawer.value === name ? null : name;
-}
-function openDrawer(name) {
-  activeDrawer.value = name;
 }
 
 onMounted(() => {
