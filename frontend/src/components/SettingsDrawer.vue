@@ -37,8 +37,11 @@ const { width: drawerWidth, isResizing: resizing, startResize } = useResizableDr
 });
 </script>
 
-<style scoped>
+<style>
 @import "@/assets/drawer.css";
+</style>
+
+<style scoped>
 
 .drawer-inner {
   flex: 1;

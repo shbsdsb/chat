@@ -53,8 +53,11 @@ function handleNewChat() {
 }
 </script>
 
-<style scoped>
+<style>
 @import "@/assets/drawer.css";
+</style>
+
+<style scoped>
 
 .drawer-inner {
   flex: 1;

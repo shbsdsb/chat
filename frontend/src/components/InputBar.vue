@@ -61,13 +61,13 @@ function handleSend() {
 }
 </script>
 
-<style scoped>
+<style>
 .input-bar {
   padding: 12px 24px 16px;
   border-top: 1px solid #f0f0f0;
 }
 
-.input-wrapper {
+.input-bar .input-wrapper {
   display: flex;
   align-items: flex-end;
   border: 1px solid #d5d5d5;
@@ -76,7 +76,7 @@ function handleSend() {
   background: #fff;
 }
 
-.input-field {
+.input-bar .input-field {
   flex: 1;
   border: none;
   outline: none;
@@ -87,11 +87,11 @@ function handleSend() {
   padding: 4px 0;
   font-family: inherit;
 }
-.input-field::placeholder {
+.input-bar .input-field::placeholder {
   color: #bbb;
 }
 
-.btn-send {
+.input-bar .btn-send {
   width: 36px;
   height: 36px;
   border-radius: 50%;
@@ -105,27 +105,27 @@ function handleSend() {
   flex-shrink: 0;
   transition: background 0.2s, transform 0.15s;
 }
-.btn-send:hover {
+.input-bar .btn-send:hover {
   background: #0077b5;
   transform: scale(1.05);
 }
-.btn-send:active {
+.input-bar .btn-send:active {
   transform: scale(0.95);
 }
-.btn-send.is-streaming {
+.input-bar .btn-send.is-streaming {
   background: #e53935;
 }
-.btn-send.is-streaming:hover {
+.input-bar .btn-send.is-streaming:hover {
   background: #c62828;
 }
 
-.icon-send {
+.input-bar .icon-send {
   width: 18px;
   height: 18px;
-  margin-left: 1px; /* 视觉居中微调 */
+  margin-left: 1px;
 }
 
-.icon-stop {
+.input-bar .icon-stop {
   width: 14px;
   height: 14px;
 }

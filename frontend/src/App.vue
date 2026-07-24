@@ -6,6 +6,7 @@
         <span class="top-title">Chat</span>
       </div>
       <nav class="top-nav">
+        <CssPresetSelector @open-drawer="showCssDrawer = true" />
         <button class="top-btn" @click="showParamPresets = !showParamPresets">预设</button>
         <button class="top-btn" @click="showSettings = !showSettings">API 设置</button>
       </nav>
@@ -23,6 +24,7 @@
         <template #title>API 设置</template>
         <SettingsView @saved="showSettings = false" />
       </SettingsDrawer>
+      <CustomCssDrawer :visible="showCssDrawer" @close="showCssDrawer = false" />
     </div>
     <AlertDialog />
   </div>
@@ -34,19 +36,25 @@ import ConversationsDrawer from "@/components/ConversationsDrawer.vue";
 import SettingsDrawer from "@/components/SettingsDrawer.vue";
 import SettingsView from "@/views/SettingsView.vue";
 import ParamPresetSelector from "@/components/ParamPresetSelector.vue";
+import CssPresetSelector from "@/components/CssPresetSelector.vue";
+import CustomCssDrawer from "@/components/CustomCssDrawer.vue";
 import AlertDialog from "@/components/AlertDialog.vue";
 import { useChatStore } from "@/stores/chat";
 import { useParamPresetsStore } from "@/stores/paramPresets";
+import { useCssPresetsStore } from "@/stores/cssPresets";
 
 const chatStore = useChatStore();
 const paramPresetsStore = useParamPresetsStore();
+const cssPresetsStore = useCssPresetsStore();
 const showConversations = ref(false);
 const showSettings = ref(false);
 const showParamPresets = ref(false);
+const showCssDrawer = ref(false);
 
 onMounted(() => {
   chatStore.loadConversations();
   paramPresetsStore.loadPresets();
+  cssPresetsStore.loadPresets();
 });
 </script>
 

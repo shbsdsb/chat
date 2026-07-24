@@ -33,3 +33,6 @@ venv/
 # OS
 .DS_Store
 Thumbs.db
+
+# 目标/规划文档（本地参考，不上传）
+Goal/

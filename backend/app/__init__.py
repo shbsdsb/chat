@@ -33,6 +33,7 @@ def create_app():
     import app.routes.settings      # noqa — 注册 /api/settings 系列路由
     import app.routes.conversations # noqa — 注册 /api/conversations 系列路由
     import app.routes.param_presets  # noqa — 注册 /api/param-presets 系列路由
+    import app.routes.css_presets   # noqa — 注册 /api/css-presets 系列路由
 
     flask_app.register_blueprint(api_bp, url_prefix="/api")
 
@@ -40,6 +41,8 @@ def create_app():
     os.makedirs(os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), "user_data", "logs"), exist_ok=True)
     init_storage()  # 初始化 JSON 存储（幂等）
     from app.storage.param_presets import init_param_presets
+    from app.storage.css_presets import init_css_presets
     init_param_presets()  # 初始化参数预设存储（幂等）
+    init_css_presets()    # 初始化CSS预设存储（幂等）
 
     return flask_app
