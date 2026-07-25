@@ -11,7 +11,18 @@ def test_registry_path_under_extensions_dir():
     assert path.endswith(os.path.join("user_data", "extensions", ".registry.json"))
 
 
-def test_read_registry_returns_empty_when_no_file():
+def test_read_registry_returns_empty_when_no_file(tmp_path, monkeypatch):
+    reg_file = tmp_path / ".registry.json"
+    monkeypatch.setattr("app.extensions.registry.get_registry_path", lambda: str(reg_file))
+    data = read_registry()
+    assert data == {"extensions": {}}
+
+
+def test_read_registry_returns_empty_on_json_decode_error(tmp_path, monkeypatch):
+    reg_file = tmp_path / ".registry.json"
+    monkeypatch.setattr("app.extensions.registry.get_registry_path", lambda: str(reg_file))
+    # Write invalid JSON to the registry file
+    reg_file.write_text("{invalid json", encoding="utf-8")
     data = read_registry()
     assert data == {"extensions": {}}
 
