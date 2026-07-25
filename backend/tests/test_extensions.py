@@ -302,3 +302,304 @@ def test_unload_extension_removes_from_dispatcher(tmp_path, monkeypatch):
     unload_extension("to-unload", dispatcher)
     output = dispatcher.dispatch("chat.post_receive", {})
     assert output == []
+
+
+# ============================================================
+# Task 7: /api/extensions 路由集成测试
+# ============================================================
+
+import zipfile
+import app.extensions
+from app import create_app
+
+
+@pytest.fixture
+def api_client(tmp_path, monkeypatch):
+    """创建带隔离扩展目录的测试客户端"""
+    ext_dir = tmp_path / "extensions"
+    reg_file = tmp_path / ".registry.json"
+    monkeypatch.setattr("app.extensions.installer.EXTENSIONS_DIR", str(ext_dir))
+    monkeypatch.setattr("app.extensions.loader.EXTENSIONS_DIR", str(ext_dir))
+    monkeypatch.setattr("app.extensions.registry.EXTENSIONS_DIR", str(ext_dir))
+    monkeypatch.setattr("app.extensions.registry.get_registry_path", lambda: str(reg_file))
+    # 重置 ExtensionManager 单例
+    app.extensions._manager = app.extensions.ExtensionManager()
+    app_mock = create_app()
+    app_mock.config["TESTING"] = True
+    return app_mock.test_client()
+
+
+class TestListExtensions:
+    def test_empty(self, api_client):
+        resp = api_client.get("/api/extensions")
+        data = resp.get_json()
+        assert data["code"] == 0
+        assert data["data"] == []
+
+    def test_with_installed_extension(self, api_client, tmp_path, monkeypatch):
+        # 先通过直接注册表注入一个扩展
+        ext_dir = tmp_path / "extensions"
+        monkeypatch.setattr("app.extensions.installer.EXTENSIONS_DIR", str(ext_dir))
+        monkeypatch.setattr("app.extensions.loader.EXTENSIONS_DIR", str(ext_dir))
+        monkeypatch.setattr("app.extensions.registry.EXTENSIONS_DIR", str(ext_dir))
+
+        ext_path = ext_dir / "my-ext"
+        ext_path.mkdir(parents=True)
+        manifest = {"id": "my-ext", "name": "My Extension", "version": "1.0.0",
+                     "description": "A test ext",
+                     "permissions": [], "ext_points": {"backend": [], "frontend": ["message_decorator"]},
+                     "min_app_version": "1.0.0"}
+        (ext_path / "manifest.json").write_text(json.dumps(manifest), encoding="utf-8")
+
+        from app.extensions.registry import add_extension, write_registry
+        write_registry({"extensions": {}})
+        add_extension("my-ext", {
+            "version": "1.0.0", "enabled": True,
+            "installed_at": "2026-01-01T00:00:00Z",
+            "install_method": "zip",
+            "permissions_granted": []
+        })
+
+        resp = api_client.get("/api/extensions")
+        data = resp.get_json()
+        assert data["code"] == 0
+        assert len(data["data"]) == 1
+        ext = data["data"][0]
+        assert ext["id"] == "my-ext"
+        assert ext["name"] == "My Extension"
+        assert ext["description"] == "A test ext"
+        assert ext["frontend"] is True
+
+
+class TestInstallExtension:
+    def test_install_from_zip_requires_file(self, api_client):
+        resp = api_client.post("/api/extensions/install",
+                               data={"install_method": "zip"},
+                               content_type="multipart/form-data")
+        data = resp.get_json()
+        assert data["code"] == 400
+
+    def test_install_from_zip_success(self, api_client, tmp_path, monkeypatch):
+        ext_dir = tmp_path / "extensions"
+        monkeypatch.setattr("app.extensions.installer.EXTENSIONS_DIR", str(ext_dir))
+        monkeypatch.setattr("app.extensions.loader.EXTENSIONS_DIR", str(ext_dir))
+        monkeypatch.setattr("app.extensions.registry.EXTENSIONS_DIR", str(ext_dir))
+
+        # 创建 zip 文件
+        zip_path = tmp_path / "test-ext.zip"
+        manifest = {"id": "api-test-ext", "name": "API Test Ext", "version": "1.0.0",
+                    "permissions": ["hook:chat"], "ext_points": {"backend": [], "frontend": []},
+                    "min_app_version": "1.0.0"}
+        with zipfile.ZipFile(zip_path, "w") as zf:
+            zf.writestr("manifest.json", json.dumps(manifest))
+            zf.writestr("backend.py", "")
+
+        with open(zip_path, "rb") as fh:
+            resp = api_client.post("/api/extensions/install",
+                                   data={"install_method": "zip", "file": (fh, "test-ext.zip")},
+                                   content_type="multipart/form-data")
+        data = resp.get_json()
+        assert data["code"] == 0
+        assert data["data"]["id"] == "api-test-ext"
+        assert data["data"]["pending_approval"] is True
+        assert "hook:chat" in data["data"]["permissions"]
+
+
+class TestConfirmExtension:
+    def test_confirm_not_found(self, api_client):
+        resp = api_client.post("/api/extensions/nonexistent/confirm",
+                               json={"permissions": []})
+        data = resp.get_json()
+        assert data["code"] == 404
+
+    def test_confirm_and_load(self, api_client, tmp_path, monkeypatch):
+        ext_dir = tmp_path / "extensions"
+        monkeypatch.setattr("app.extensions.installer.EXTENSIONS_DIR", str(ext_dir))
+        monkeypatch.setattr("app.extensions.loader.EXTENSIONS_DIR", str(ext_dir))
+        monkeypatch.setattr("app.extensions.registry.EXTENSIONS_DIR", str(ext_dir))
+
+        # 准备扩展目录（模拟 install 后的状态）
+        ext_path = ext_dir / "confirm-ext"
+        ext_path.mkdir(parents=True)
+        manifest = {"id": "confirm-ext", "name": "Confirm Test", "version": "1.0.0",
+                    "permissions": ["hook:chat"], "ext_points": {"backend": ["chat.post_receive"]},
+                    "min_app_version": "1.0.0"}
+        (ext_path / "manifest.json").write_text(json.dumps(manifest), encoding="utf-8")
+        (ext_path / "backend.py").write_text(
+            "def on_chat_post_receive(ctx): return {'handled': True}\n", encoding="utf-8")
+
+        from app.extensions.registry import write_registry
+        write_registry({"extensions": {}})
+
+        resp = api_client.post("/api/extensions/confirm-ext/confirm",
+                               json={"permissions": ["hook:chat"]})
+        data = resp.get_json()
+        assert data["code"] == 0
+        assert data["data"]["id"] == "confirm-ext"
+        assert data["data"]["status"] == "loaded"
+        assert "chat.post_receive" in data["data"]["registered_hooks"]
+
+
+class TestUninstallExtension:
+    def test_uninstall_not_found(self, api_client):
+        resp = api_client.post("/api/extensions/nonexistent/uninstall")
+        data = resp.get_json()
+        assert data["code"] == 404
+
+    def test_uninstall_success(self, api_client, tmp_path, monkeypatch):
+        ext_dir = tmp_path / "extensions"
+        monkeypatch.setattr("app.extensions.installer.EXTENSIONS_DIR", str(ext_dir))
+        monkeypatch.setattr("app.extensions.loader.EXTENSIONS_DIR", str(ext_dir))
+        monkeypatch.setattr("app.extensions.registry.EXTENSIONS_DIR", str(ext_dir))
+
+        # 准备扩展
+        ext_path = ext_dir / "to-uninstall"
+        ext_path.mkdir(parents=True)
+        (ext_path / "manifest.json").write_text(json.dumps(
+            {"id": "to-uninstall", "name": "X", "version": "1.0.0",
+             "permissions": [], "ext_points": {"backend": [], "frontend": []},
+             "min_app_version": "1.0.0"}), encoding="utf-8")
+
+        from app.extensions.registry import add_extension, write_registry
+        write_registry({"extensions": {}})
+        add_extension("to-uninstall", {
+            "version": "1.0.0", "enabled": True,
+            "installed_at": "2026-01-01T00:00:00Z",
+            "install_method": "zip",
+            "permissions_granted": []
+        })
+
+        resp = api_client.post("/api/extensions/to-uninstall/uninstall")
+        data = resp.get_json()
+        assert data["code"] == 0
+        assert "已卸载" in data["message"]
+
+        # 确认注册表已移除
+        from app.extensions.registry import get_extension
+        assert get_extension("to-uninstall") is None
+
+
+class TestUpdateExtension:
+    def test_update_not_found(self, api_client):
+        resp = api_client.post("/api/extensions/nonexistent/update")
+        data = resp.get_json()
+        assert data["code"] == 404
+
+    def test_update_non_git_rejected(self, api_client, tmp_path, monkeypatch):
+        ext_dir = tmp_path / "extensions"
+        monkeypatch.setattr("app.extensions.installer.EXTENSIONS_DIR", str(ext_dir))
+        monkeypatch.setattr("app.extensions.loader.EXTENSIONS_DIR", str(ext_dir))
+        monkeypatch.setattr("app.extensions.registry.EXTENSIONS_DIR", str(ext_dir))
+
+        from app.extensions.registry import add_extension, write_registry
+        write_registry({"extensions": {}})
+        add_extension("zip-ext", {
+            "version": "1.0.0", "enabled": True,
+            "installed_at": "2026-01-01T00:00:00Z",
+            "install_method": "zip",
+            "permissions_granted": []
+        })
+
+        resp = api_client.post("/api/extensions/zip-ext/update")
+        data = resp.get_json()
+        assert data["code"] == 400
+        assert "Git" in data["message"]
+
+
+class TestToggleExtension:
+    def test_toggle_not_found(self, api_client):
+        resp = api_client.post("/api/extensions/nonexistent/toggle")
+        data = resp.get_json()
+        assert data["code"] == 404
+
+    def test_toggle_disable(self, api_client, tmp_path, monkeypatch):
+        ext_dir = tmp_path / "extensions"
+        monkeypatch.setattr("app.extensions.installer.EXTENSIONS_DIR", str(ext_dir))
+        monkeypatch.setattr("app.extensions.loader.EXTENSIONS_DIR", str(ext_dir))
+        monkeypatch.setattr("app.extensions.registry.EXTENSIONS_DIR", str(ext_dir))
+
+        ext_path = ext_dir / "toggle-ext"
+        ext_path.mkdir(parents=True)
+        (ext_path / "manifest.json").write_text(json.dumps(
+            {"id": "toggle-ext", "name": "Toggle", "version": "1.0.0",
+             "permissions": [], "ext_points": {"backend": [], "frontend": []},
+             "min_app_version": "1.0.0"}), encoding="utf-8")
+
+        from app.extensions.registry import add_extension, write_registry
+        write_registry({"extensions": {}})
+        add_extension("toggle-ext", {
+            "version": "1.0.0", "enabled": True,
+            "installed_at": "2026-01-01T00:00:00Z",
+            "install_method": "zip",
+            "permissions_granted": []
+        })
+
+        resp = api_client.post("/api/extensions/toggle-ext/toggle",
+                               json={"enabled": False})
+        data = resp.get_json()
+        assert data["code"] == 0
+        assert data["data"]["enabled"] is False
+
+    def test_toggle_enable(self, api_client, tmp_path, monkeypatch):
+        ext_dir = tmp_path / "extensions"
+        monkeypatch.setattr("app.extensions.installer.EXTENSIONS_DIR", str(ext_dir))
+        monkeypatch.setattr("app.extensions.loader.EXTENSIONS_DIR", str(ext_dir))
+        monkeypatch.setattr("app.extensions.registry.EXTENSIONS_DIR", str(ext_dir))
+
+        ext_path = ext_dir / "toggle-on"
+        ext_path.mkdir(parents=True)
+        (ext_path / "manifest.json").write_text(json.dumps(
+            {"id": "toggle-on", "name": "Toggle On", "version": "1.0.0",
+             "permissions": [], "ext_points": {"backend": [], "frontend": []},
+             "min_app_version": "1.0.0"}), encoding="utf-8")
+
+        from app.extensions.registry import add_extension, write_registry
+        write_registry({"extensions": {}})
+        add_extension("toggle-on", {
+            "version": "1.0.0", "enabled": False,
+            "installed_at": "2026-01-01T00:00:00Z",
+            "install_method": "zip",
+            "permissions_granted": []
+        })
+
+        resp = api_client.post("/api/extensions/toggle-on/toggle",
+                               json={"enabled": True})
+        data = resp.get_json()
+        assert data["code"] == 0
+        assert data["data"]["enabled"] is True
+
+
+class TestGetManifest:
+    def test_manifest_not_found(self, api_client):
+        resp = api_client.get("/api/extensions/nonexistent/manifest")
+        data = resp.get_json()
+        assert data["code"] == 404
+
+    def test_manifest_success(self, api_client, tmp_path, monkeypatch):
+        ext_dir = tmp_path / "extensions"
+        monkeypatch.setattr("app.extensions.installer.EXTENSIONS_DIR", str(ext_dir))
+        monkeypatch.setattr("app.extensions.loader.EXTENSIONS_DIR", str(ext_dir))
+        monkeypatch.setattr("app.extensions.registry.EXTENSIONS_DIR", str(ext_dir))
+
+        ext_path = ext_dir / "manifest-ext"
+        ext_path.mkdir(parents=True)
+        manifest_data = {"id": "manifest-ext", "name": "Manifest Ext", "version": "2.0.0",
+                         "permissions": ["read:conversations"], "ext_points": {"backend": [], "frontend": []},
+                         "min_app_version": "1.0.0"}
+        (ext_path / "manifest.json").write_text(json.dumps(manifest_data), encoding="utf-8")
+
+        from app.extensions.registry import add_extension, write_registry
+        write_registry({"extensions": {}})
+        add_extension("manifest-ext", {
+            "version": "2.0.0", "enabled": True,
+            "installed_at": "2026-01-01T00:00:00Z",
+            "install_method": "zip",
+            "permissions_granted": ["read:conversations"]
+        })
+
+        resp = api_client.get("/api/extensions/manifest-ext/manifest")
+        data = resp.get_json()
+        assert data["code"] == 0
+        assert data["data"]["id"] == "manifest-ext"
+        assert data["data"]["name"] == "Manifest Ext"
+        assert data["data"]["version"] == "2.0.0"

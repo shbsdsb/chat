@@ -34,6 +34,7 @@ def create_app():
     import app.routes.conversations # noqa — 注册 /api/conversations 系列路由
     import app.routes.param_presets  # noqa — 注册 /api/param-presets 系列路由
     import app.routes.css_presets   # noqa — 注册 /api/css-presets 系列路由
+    import app.routes.extensions   # noqa — 注册 /api/extensions 系列路由
 
     flask_app.register_blueprint(api_bp, url_prefix="/api")
 
@@ -44,5 +45,10 @@ def create_app():
     from app.storage.css_presets import init_css_presets
     init_param_presets()  # 初始化参数预设存储（幂等）
     init_css_presets()    # 初始化CSS预设存储（幂等）
+
+    # ── 扩展系统初始化 ───────────────────────────
+    from app.extensions import get_extension_manager
+    os.makedirs(os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), "user_data", "extensions"), exist_ok=True)
+    get_extension_manager().init()
 
     return flask_app
