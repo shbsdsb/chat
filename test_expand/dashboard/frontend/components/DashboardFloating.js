@@ -9,7 +9,7 @@ function formatTokens(n) {
   return String(n);
 }
 
-export default {
+window.__DASHBOARD_FLOATING__ = {
   name: 'DashboardFloating',
   props: { api: Object },
   setup(props) {
