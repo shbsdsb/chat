@@ -10,7 +10,7 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue';
+import { ref, watch, onMounted } from 'vue';
 import { useExtensionsStore } from '@/stores/extensions';
 import { createExtensionApi } from './useExtensionApi';
 
@@ -23,7 +23,7 @@ const props = defineProps({
 const extensionsStore = useExtensionsStore();
 const components = ref([]);
 
-onMounted(() => {
+function loadComponents() {
   const registry = window.__EXTENSION_REGISTRY__ || {};
   const result = [];
   for (const ext of extensionsStore.enabledExtensions) {
@@ -44,7 +44,15 @@ onMounted(() => {
     }
   }
   components.value = result;
+}
+
+onMounted(() => {
+  loadComponents();
 });
+
+watch(() => extensionsStore.enabledExtensions, () => {
+  loadComponents();
+}, { deep: true });
 </script>
 
 <style scoped>

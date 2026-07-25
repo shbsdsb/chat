@@ -30,7 +30,12 @@ def _load_backend_module(ext_id, ext_dir):
     spec = importlib.util.spec_from_file_location(module_name, backend_path)
     module = importlib.util.module_from_spec(spec)
     sys.modules[module_name] = module
-    spec.loader.exec_module(module)
+    try:
+        spec.loader.exec_module(module)
+    except Exception:
+        logger.exception(f"加载扩展 {ext_id} 的后端模块失败")
+        sys.modules.pop(module_name, None)
+        return None
     return module
 
 
@@ -79,11 +84,14 @@ def load_extension(ext_id, dispatcher):
     }
 
 
-def unload_extension(ext_id, dispatcher):
+def unload_extension(ext_id, dispatcher, _loaded=None):
     dispatcher.unregister_extension(ext_id)
     # 清理 sys.modules 中的模块缓存
     module_name = f"_ext_{ext_id.replace('-', '_')}"
     sys.modules.pop(module_name, None)
+    # 清理 ExtensionManager 的 _loaded 记录
+    if _loaded is not None:
+        _loaded.pop(ext_id, None)
 
 
 def load_all_enabled(dispatcher):

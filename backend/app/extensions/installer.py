@@ -24,6 +24,28 @@ def _read_manifest(ext_dir):
         return json.load(f)
 
 
+def _read_app_version():
+    """从项目根 config.json 读取当前应用版本。"""
+    config_path = os.path.join(
+        os.path.dirname(os.path.dirname(os.path.dirname(__file__))),
+        "config.json"
+    )
+    try:
+        with open(config_path, "r", encoding="utf-8") as f:
+            cfg = json.load(f)
+            return cfg.get("version", "0.0.0")
+    except Exception:
+        return "0.0.0"
+
+
+def _parse_version(v):
+    """将 '1.2.3' 转换为 (1,2,3) 元组，非法值返回空元组。"""
+    try:
+        return tuple(int(x) for x in str(v).split("."))
+    except Exception:
+        return ()
+
+
 def _validate_manifest(manifest):
     required = ["id", "name", "version", "permissions", "ext_points", "min_app_version"]
     for key in required:
@@ -33,6 +55,14 @@ def _validate_manifest(manifest):
         raise ValueError("permissions 必须是数组")
     if not isinstance(manifest["ext_points"], dict):
         raise ValueError("ext_points 必须是对象")
+    # 检查 min_app_version 兼容性
+    app_ver = _parse_version(_read_app_version())
+    min_ver = _parse_version(manifest["min_app_version"])
+    if app_ver and min_ver and app_ver < min_ver:
+        raise ValueError(
+            f"扩展要求最低应用版本 {manifest['min_app_version']}，"
+            f"当前版本 {_read_app_version()}"
+        )
 
 
 def install_from_git(url, branch="main"):

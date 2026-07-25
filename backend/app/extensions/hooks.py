@@ -1,3 +1,4 @@
+import concurrent.futures
 import logging
 import threading
 
@@ -24,19 +25,22 @@ class HookDispatcher:
                 ]
 
     def dispatch(self, ext_point, ctx):
+        """分发钩子，每个 handler 有 30s 超时。"""
+        with self._lock:
+            handlers = list(self._handlers.get(ext_point, []))
+        # 在锁外执行 handler，快照保证一致性
         results = []
-        handlers = list(self._handlers.get(ext_point, []))
         for ext_id, handler in handlers:
             try:
-                result = handler(ctx)
+                with concurrent.futures.ThreadPoolExecutor(max_workers=1) as executor:
+                    future = executor.submit(handler, ctx)
+                    result = future.result(timeout=30)
                 if result is not None:
                     if isinstance(result, dict):
                         result.setdefault("extension_id", ext_id)
-                        # 规范化：统一转换为 {extension_id, message_meta} 格式
                         if "meta" in result and "message_meta" not in result:
                             result["message_meta"] = result.pop("meta")
                         if "message_meta" not in result:
-                            # 非标准格式：整体包装为 message_meta
                             ext_id_val = result.pop("extension_id")
                             result = {
                                 "extension_id": ext_id_val,
@@ -48,6 +52,10 @@ class HookDispatcher:
                             "extension_id": ext_id,
                             "message_meta": result,
                         })
+            except concurrent.futures.TimeoutError:
+                logger.warning(
+                    f"扩展 {ext_id} 的钩子 {ext_point} 执行超时（30s），已跳过"
+                )
             except Exception:
                 logger.exception(
                     f"扩展 {ext_id} 的钩子 {ext_point} 执行异常"

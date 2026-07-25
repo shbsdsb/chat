@@ -1,13 +1,15 @@
 # backend/app/routes/extensions.py
 import os
 import json
+import shutil
 import tempfile
 from datetime import datetime, timezone
 
-from flask import request
+from flask import request, Response
 from app.routes import api_bp
 from app.utils.response import ok, fail
 from app.extensions import get_extension_manager
+import app.extensions.registry as _reg
 import app.extensions.installer as _installer
 from app.extensions.installer import (
     install_from_git,
@@ -23,13 +25,7 @@ from app.extensions.registry import (
     set_extension_state,
 )
 from app.extensions.permissions import validate_permissions
-
-
-def _check_ext_exists(ext_id):
-    ext = get_extension(ext_id)
-    if not ext:
-        return None
-    return ext
+from app.extensions.loader import unload_extension as _unload
 
 
 @api_bp.route("/extensions")
@@ -39,7 +35,7 @@ def list_extensions():
     result = []
     for ext_id, info in exts.items():
         entry = {"id": ext_id, **info}
-        manifest_path = os.path.join(_installer.EXTENSIONS_DIR, ext_id, "manifest.json")
+        manifest_path = os.path.join(_reg.EXTENSIONS_DIR, ext_id, "manifest.json")
         if os.path.isfile(manifest_path):
             with open(manifest_path, "r", encoding="utf-8") as f:
                 m = json.load(f)
@@ -79,7 +75,7 @@ def install_extension():
         else:
             return fail(400, "不支持的安装方式")
 
-        manifest_path = os.path.join(_installer.EXTENSIONS_DIR, ext_id, "manifest.json")
+        manifest_path = os.path.join(_reg.EXTENSIONS_DIR, ext_id, "manifest.json")
         with open(manifest_path, "r", encoding="utf-8") as f:
             manifest = json.load(f)
 
@@ -100,7 +96,7 @@ def confirm_extension(ext_id):
     body = request.get_json(silent=True) or {}
     approved_permissions = body.get("permissions", [])
 
-    manifest_path = os.path.join(_installer.EXTENSIONS_DIR, ext_id, "manifest.json")
+    manifest_path = os.path.join(_reg.EXTENSIONS_DIR, ext_id, "manifest.json")
     if not os.path.isfile(manifest_path):
         return fail(404, "扩展不存在")
 
@@ -135,12 +131,11 @@ def confirm_extension(ext_id):
 
 @api_bp.route("/extensions/<ext_id>/uninstall", methods=["POST"])
 def uninstall_extension_route(ext_id):
-    if not _check_ext_exists(ext_id):
+    if not get_extension(ext_id):
         return fail(404, "扩展不存在")
 
     mgr = get_extension_manager()
-    from app.extensions.loader import unload_extension as _unload
-    _unload(ext_id, mgr.dispatcher)
+    _unload(ext_id, mgr.dispatcher, mgr._loaded)
 
     uninstall_extension(ext_id)
     remove_extension(ext_id)
@@ -150,7 +145,7 @@ def uninstall_extension_route(ext_id):
 
 @api_bp.route("/extensions/<ext_id>/update", methods=["POST"])
 def update_extension_route(ext_id):
-    ext = _check_ext_exists(ext_id)
+    ext = get_extension(ext_id)
     if not ext:
         return fail(404, "扩展不存在")
     if ext.get("install_method") != "git":
@@ -172,7 +167,7 @@ def update_extension_route(ext_id):
 
 @api_bp.route("/extensions/<ext_id>/toggle", methods=["POST"])
 def toggle_extension_route(ext_id):
-    ext = _check_ext_exists(ext_id)
+    ext = get_extension(ext_id)
     if not ext:
         return fail(404, "扩展不存在")
 
@@ -185,18 +180,49 @@ def toggle_extension_route(ext_id):
         result = mgr.reload_extension(ext_id)
         return ok(data={"enabled": True, "status": result["status"]})
     else:
-        from app.extensions.loader import unload_extension as _unload
-        _unload(ext_id, mgr.dispatcher)
+        _unload(ext_id, mgr.dispatcher, mgr._loaded)
         return ok(data={"enabled": False})
+
+
+@api_bp.route("/extensions/install/cancel", methods=["POST"])
+def cancel_install():
+    """取消未确认的安装，清理扩展目录。"""
+    body = request.get_json(silent=True) or {}
+    ext_id = (body.get("ext_id") or "").strip()
+    if not ext_id:
+        # 不带 ext_id 时无操作
+        return ok(message="无待取消的安装")
+    ext_dir = os.path.join(_reg.EXTENSIONS_DIR, ext_id)
+    if os.path.isdir(ext_dir):
+        shutil.rmtree(ext_dir, ignore_errors=True)
+    return ok(message=f"已取消扩展 {ext_id} 的安装")
+
+
+@api_bp.route("/extensions/<ext_id>/frontend")
+def get_extension_frontend(ext_id):
+    """返回扩展前端入口 JS 代码。"""
+    ext = get_extension(ext_id)
+    if not ext:
+        return fail(404, "扩展不存在")
+    if not ext.get("enabled"):
+        return fail(403, "扩展已禁用")
+
+    frontend_path = os.path.join(_reg.EXTENSIONS_DIR, ext_id, "frontend.js")
+    if not os.path.isfile(frontend_path):
+        return fail(404, "frontend.js 不存在")
+
+    with open(frontend_path, "r", encoding="utf-8") as f:
+        code = f.read()
+    return Response(code, mimetype="application/javascript")
 
 
 @api_bp.route("/extensions/<ext_id>/manifest")
 def get_extension_manifest(ext_id):
-    ext = _check_ext_exists(ext_id)
+    ext = get_extension(ext_id)
     if not ext:
         return fail(404, "扩展不存在")
 
-    manifest_path = os.path.join(_installer.EXTENSIONS_DIR, ext_id, "manifest.json")
+    manifest_path = os.path.join(_reg.EXTENSIONS_DIR, ext_id, "manifest.json")
     if not os.path.isfile(manifest_path):
         return fail(404, "manifest.json 不存在")
 

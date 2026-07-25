@@ -9,6 +9,7 @@
         <CssPresetSelector @open-drawer="toggleDrawer('css')" />
         <button class="top-btn" @click="toggleDrawer('presets')">预设</button>
         <button class="top-btn" @click="toggleDrawer('api')">API 设置</button>
+        <button class="top-btn" @click="showExtensions = !showExtensions">🧩 扩展</button>
       </nav>
     </header>
     <div class="app-body">
@@ -31,6 +32,7 @@
           <CssPresetEditor v-else-if="activeDrawer === 'css'" key="css" />
         </Transition>
       </SettingsDrawer>
+      <ExtensionManager :visible="showExtensions" @close="showExtensions = false" />
     </div>
     <AlertDialog />
   </div>
@@ -45,14 +47,18 @@ import ParamPresetSelector from "@/components/ParamPresetSelector.vue";
 import CssPresetSelector from "@/components/CssPresetSelector.vue";
 import CssPresetEditor from "@/components/CssPresetEditor.vue";
 import AlertDialog from "@/components/AlertDialog.vue";
+import ExtensionManager from "@/components/ExtensionManager.vue";
 import { useChatStore } from "@/stores/chat";
 import { useParamPresetsStore } from "@/stores/paramPresets";
 import { useCssPresetsStore } from "@/stores/cssPresets";
+import { useExtensionsStore } from "@/stores/extensions";
 
 const chatStore = useChatStore();
 const paramPresetsStore = useParamPresetsStore();
 const cssPresetsStore = useCssPresetsStore();
+const extensionsStore = useExtensionsStore();
 const showConversations = ref(false);
+const showExtensions = ref(false);
 
 // 单状态互斥：三个设置抽屉共用一个 activeDrawer
 const activeDrawer = ref(null); // null | 'api' | 'presets' | 'css'
@@ -68,6 +74,7 @@ onMounted(() => {
   chatStore.loadConversations();
   paramPresetsStore.loadPresets();
   cssPresetsStore.loadPresets();
+  extensionsStore.fetchExtensions();
 });
 </script>
 

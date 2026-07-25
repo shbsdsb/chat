@@ -323,6 +323,7 @@ def api_client(tmp_path, monkeypatch):
     monkeypatch.setattr("app.extensions.registry.EXTENSIONS_DIR", str(ext_dir))
     monkeypatch.setattr("app.extensions.registry.get_registry_path", lambda: str(reg_file))
     # 重置 ExtensionManager 单例
+    import app.extensions
     app.extensions._manager = app.extensions.ExtensionManager()
     app_mock = create_app()
     app_mock.config["TESTING"] = True
