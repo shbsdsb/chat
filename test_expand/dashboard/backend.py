@@ -90,8 +90,8 @@ def on_chat_post_receive(ctx):
     return None
 
 
-def register_api_routes(api_bp):
-    @api_bp.route("/ext/dashboard/<conv_id>/metrics")
+def register_api_routes(app):
+    @app.route("/api/ext/dashboard/<conv_id>/metrics")
     def dashboard_metrics(conv_id):
         from flask import jsonify
         metrics = _read_metrics(conv_id)
