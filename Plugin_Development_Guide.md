@@ -217,3 +217,145 @@ chat/
 | `.registry.json` | 注册表，记录了所有扩展的启用状态和授权权限 |
 
 > ⚠️ 两个目录各自独立。修改 `test_expand/` 后必须手动同步到 `user_data/extensions/`，否则不会生效。
+
+---
+
+## 第二部分：主题参考
+
+### 2.1 架构总览
+
+在深入每个模块之前，先看一张全链路图——了解扩展从注册到运行的全过程。
+
+#### 后端加载流程
+
+```
+Flask 启动 (create_app)
+  └→ ExtensionManager.init(api_bp)
+       └→ load_all_enabled()
+            └→ 遍历 .registry.json 中 enabled 为 true 的扩展
+                 └→ load_extension(ext_id, dispatcher, api_bp)
+                      ├→ importlib 动态加载 backend.py
+                      ├→ 读取 manifest.json 的 ext_points.backend
+                      ├→ 若含 api_route → 调用 register_api_routes(api_bp)
+                      └→ 若含 chat.post_receive → dispatcher.register_hook()
+```
+
+#### 前端加载流程
+
+```
+Vue 应用启动 (main.js)
+  └→ App.vue 中的 <ExtensionSlot name="panel" />
+       └→ onMounted：遍历扩展列表
+            ├→ fetch(/api/extensions/<id>/frontend) → 获取 JS 代码
+            ├→ 以 <script> 标签注入 DOM
+            │    └→ index.js 执行 → 写入 window.__EXTENSION_REGISTRY__
+            └→ 从注册表取出匹配 slot 的组件
+                 └→ markRaw() 防止深度反应化
+                 └→ shallowRef() 浅层引用
+                 └→ <component :is> 渲染，传入 props.api
+```
+
+#### 钩子触发流程
+
+```
+AI 响应完成 (conversations.py)
+  └→ 构造 hook_ctx = { conversation_id, messages, request_body, response_body, settings, ... }
+       └→ dispatcher.dispatch("chat.post_receive", hook_ctx)
+            └→ 线程池执行每个扩展的 on_chat_post_receive(ctx)
+                 ├→ 超时限制：30 秒
+                 ├→ 异常隔离：单个扩展报错不影响其他
+                 └→ 返回值合并到消息的 extensions 字段
+```
+
+#### 核心模块一览
+
+| 模块 | 文件位置 | 作用 |
+|------|----------|------|
+| ExtensionManager | `backend/app/extensions/__init__.py` | 单例管理器，init() 驱动全量加载，reload_extension() 热重载 |
+| loader | `backend/app/extensions/loader.py` | 读取 manifest，动态加载 backend.py，按 EXT_POINT_TO_FUNC 映射注册 |
+| HookDispatcher | `backend/app/extensions/hooks.py` | 钩子调度器，dispatch() 用线程池并发执行，30s 超时 |
+| registry | `backend/app/extensions/registry.py` | .registry.json 的 CRUD，线程安全（threading.Lock） |
+| installer | `backend/app/extensions/installer.py` | ZIP/Git 安装，manifest 校验，权限验证 |
+| permissions | `backend/app/extensions/permissions.py` | 权限常量定义与验证 |
+| ExtensionSlot | `frontend/src/extensions/ExtensionSlot.vue` | Vue 插槽组件，动态加载 JS 并渲染扩展组件 |
+| useExtensionApi | `frontend/src/extensions/useExtensionApi.js` | 扩展安全访问 Pinia Store 的封装 |
+| extensions Store | `frontend/src/stores/extensions.js` | 扩展列表、安装/卸载/启停等操作的状态管理 |
+| extensions API | `frontend/src/api/extensions.js` | 前端对 /api/extensions 的 HTTP 请求封装 |
+
+---
+
+### 2.2 manifest.json 完整规范
+
+manifest.json 是扩展的声明文件，应用通过它了解扩展的身份、需求和能力。
+
+#### 必填字段
+
+| 字段 | 类型 | 约束 | 说明 |
+|------|------|------|------|
+| `id` | string | 字母数字下划线连字符，1-64 字符，与目录名一致 | 扩展唯一标识 |
+| `name` | string | 任意 | 扩展显示名称 |
+| `version` | string | 语义化版本（如 `"1.0.0"`） | 版本号 |
+| `permissions` | string[] | 必须是下方权限表中的值 | 声明扩展所需权限 |
+| `ext_points` | object | `{ backend: string[], frontend: string[] }` | 声明使用的扩展点 |
+| `min_app_version` | string | 语义化版本 | 最低兼容的应用版本 |
+
+#### 可选字段
+
+| 字段 | 类型 | 说明 |
+|------|------|------|
+| `description` | string | 简要描述，在扩展管理面板中展示 |
+| `author` | string | 作者名 |
+| `homepage` | string | 项目主页 URL |
+
+#### 扩展点 (ext_points)
+
+##### ext_points.backend — 后端扩展点
+
+| 扩展点 | 需实现的函数 | 触发时机 |
+|--------|-------------|----------|
+| `chat.post_receive` | `on_chat_post_receive(ctx)` | AI 回复完成后 |
+| `chat.pre_send` | `on_chat_pre_send(ctx)` | 消息发送前（已注册映射，暂未 dispatch） |
+| `api_route` | `register_api_routes(app)` | Flask 启动时，传入 Blueprint 对象 |
+
+##### ext_points.frontend — 前端扩展点
+
+| 扩展点 | 插槽名 | 渲染位置 | 说明 |
+|--------|--------|----------|------|
+| `panel` | `"panel"` | App.vue 中 `<ExtensionSlot name="panel" />` | 全局面板（如 Dashboard 悬浮窗） |
+| `message_decorator` | `"message_decorator"` | 每条消息下方（预留） | 消息装饰器 |
+
+#### 权限列表
+
+应用支持的权限（定义在 `backend/app/extensions/permissions.py`）：
+
+| 权限 | 说明 | 典型场景 |
+|------|------|----------|
+| `read:conversations` | 读取会话数据 | 统计分析、会话管理 |
+| `read:world_info` | 读取 World Info 条目 | 上下文增强 |
+| `write:conversations` | 写入/修改会话数据 | 消息增强、自动回复 |
+| `hook:chat` | 注册聊天钩子 | 使用 `chat.post_receive` / `chat.pre_send` 时必需 |
+| `register:provider` | 注册自定义 AI 提供商 | 接入第三方模型 |
+| `network` | 发起外部网络请求 | 需要访问外部 API 时必需 |
+
+> 权限必须与 `.registry.json` 中的 `permissions_granted` 一致，否则安装时校验不通过。
+
+#### 完整示例
+
+以 Dashboard 扩展为例，展示一个使用多个扩展点的 manifest：
+
+```json
+{
+  "id": "dashboard",
+  "name": "Dashboard",
+  "version": "1.0.0",
+  "description": "悬浮面板，统计 token 用量",
+  "permissions": ["read:conversations", "hook:chat"],
+  "ext_points": {
+    "backend": ["chat.post_receive", "api_route"],
+    "frontend": ["panel"]
+  },
+  "min_app_version": "1.2.0"
+}
+```
+
+> 参考：`test_expand/dashboard/manifest.json`
