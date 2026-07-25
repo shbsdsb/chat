@@ -1,0 +1,13 @@
+{
+  "id": "dashboard",
+  "name": "Dashboard 悬浮面板",
+  "version": "1.0.0",
+  "author": "Chat Team",
+  "description": "可拖动的悬浮面板，显示上下文用量和会话指标",
+  "permissions": ["read:conversations", "hook:chat"],
+  "ext_points": {
+    "backend": ["chat.post_receive", "api_route"],
+    "frontend": ["panel"]
+  },
+  "min_app_version": "1.2.0"
+}
