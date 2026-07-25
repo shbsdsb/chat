@@ -9,3 +9,6 @@ export * as conversationsApi from "./conversations.js";
 
 // 设置相关 API（待实现）
 export * as settingsApi from "./settings.js";
+
+// 扩展相关 API
+export { extensionsApi } from "./extensions.js";
