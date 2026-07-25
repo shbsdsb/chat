@@ -8,7 +8,7 @@ import "highlight.js/styles/github.css";
 window.__EXTENSION_REGISTRY__ = {};
 
 // 临时：手动注册内置扩展（后续改为自动加载机制）
-import DashboardFloating from "../../user_data/extensions/dashboard/frontend/components/DashboardFloating.js";
+import DashboardFloating from "../../test_expand/dashboard/frontend/components/DashboardFloating.js";
 window.__EXTENSION_REGISTRY__["dashboard"] = {
   panel: [DashboardFloating],
 };
