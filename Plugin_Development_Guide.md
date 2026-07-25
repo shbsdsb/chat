@@ -577,3 +577,206 @@ def on_chat_post_receive(ctx):
 ```
 
 > 前端 Store 访问请参见 2.4.3 useExtensionApi。
+
+---
+
+### 2.4 前端开发
+
+#### 2.4.1 技术栈说明
+
+扩展前端使用**纯 JavaScript**编写（非 Vue SFC），通过 Vue 3 渲染函数构建界面。
+
+| 层 | 技术 | 说明 |
+|----|------|------|
+| 渲染 | Vue 3 `h()` 函数 | 创建 VNode，等价于 `<template>` 的编译结果 |
+| 响应式 | `window.__EXT_VUE__` | 应用注入的 Vue API 子集 |
+| 状态 | Pinia（通过 `props.api`） | 不直接 import store，通过 ExtensionSlot 传入的 api 对象访问 |
+| 样式 | 内联 `style` 对象 | 写在 JS 中，无构建步骤 |
+| 注册 | `window.__EXTENSION_REGISTRY__` | 全局组件注册表，按 ext_id 和 slot 名组织 |
+
+**`window.__EXT_VUE__` 包含的 API：**
+
+```javascript
+// 由 frontend/src/main.js 在应用启动时注入
+window.__EXT_VUE__ = {
+  h,                // Vue 渲染函数
+  ref,              // 响应式引用
+  computed,         // 计算属性
+  watch,            // 侦听器
+  onMounted,        // 挂载钩子
+  onBeforeUnmount   // 卸载前钩子
+};
+```
+
+**为什么用 h() 函数而不是 .vue SFC？**
+
+扩展组件以纯 `.js` 文件运行，不经过 Vite 编译。`h()` 函数是 Vue 3 的底层渲染 API，可以在运行时直接创建组件，无需编译步骤。
+
+**参考模板：** `test_expand/dashboard/frontend/components/DashboardFloating.js` — 一个完整的可拖动悬浮面板示例。
+
+---
+
+#### 2.4.2 组件注册机制
+
+扩展组件通过写入全局注册表来声明自己的存在：
+
+```
+扩展 JS 文件执行（由 ExtensionSlot 以 <script> 注入）
+  └→ 写入 window.__EXTENSION_REGISTRY__["<ext_id>"] = {
+       "panel": [ComponentA, ComponentB],
+       "message_decorator": [...]
+     }
+  └→ ExtensionSlot 读取匹配当前 slot name 的组件列表
+       └→ markRaw(comp) — 防止 Vue 深度反应化破坏组件闭包
+       └→ shallowRef([]) — 浅层引用，只追踪数组本身的变化
+       └→ <component :is="comp" :api="createExtensionApi()" />
+```
+
+**完整 index.js 模板：**
+
+```javascript
+// frontend/index.js
+(function() {
+  // 在 setup() 内实时读取 API（而非 IIFE 顶层闭包）
+  const V = window.__EXT_VUE__;
+  if (!V || typeof V.ref !== 'function') {
+    console.error('[my-extension] window.__EXT_VUE__ 不可用');
+    return;
+  }
+
+  const MyPanel = {
+    props: ['api'],
+    setup(props) {
+      const { h, ref, onMounted } = window.__EXT_VUE__;
+
+      // 从 props.api 获取应用状态
+      const conv = props.api.getCurrentConversation();
+      const messages = props.api.getMessages();
+
+      const count = ref(0);
+
+      onMounted(() => {
+        console.log('[my-extension] 面板已挂载, 会话:', conv?.id);
+      });
+
+      return () => h('div', { class: 'ext-my-panel' }, [
+        h('h3', `当前会话: ${conv?.id || '无'}`),
+        h('p', `消息数: ${messages.length}`),
+        h('button', { onClick: () => count.value++ }, `计数: ${count.value}`)
+      ]);
+    }
+  };
+
+  // 注册到全局注册表
+  const REG = window.__EXTENSION_REGISTRY__ || {};
+  REG['my-extension'] = {
+    panel: [MyPanel]  // 可注册多个组件
+  };
+  window.__EXTENSION_REGISTRY__ = REG;
+})();
+```
+
+**关键约定：**
+
+| 约定 | 说明 |
+|------|------|
+| IIFE 包裹 | 隔离作用域，不污染全局 |
+| ID 一致性 | `REG['my-extension']` 的 key 必须与 `manifest.json` 的 `id` 一致 |
+| slot 名匹配 | `panel` / `message_decorator` 对应 `ext_points.frontend` 中声明的扩展点 |
+| props.api | ExtensionSlot 自动传入，无需手动绑定 |
+| setup() 内实时读取 | 在 `setup()` 中从 `window.__EXT_VUE__` 读取 API（非 IIFE 顶层闭包），见第三部分 3.2.4 的详细说明 |
+
+---
+
+#### 2.4.3 useExtensionApi — 扩展安全 API
+
+扩展通过 `props.api` 访问应用状态，而非直接 import Pinia Store。这提供了安全层——扩展只能调用明确暴露的方法。
+
+| 方法 | 返回值 | 说明 |
+|------|--------|------|
+| `getConversation(convId)` | `Conversation \| null` | 根据会话 ID 查找完整会话对象 |
+| `getCurrentConversation()` | `{ id } \| null` | 获取当前活跃会话（只有 id 可用） |
+| `getMessages(convId?)` | `Message[]` | 不传参返回当前会话消息列表；传 convId 返回指定会话的消息 |
+| `getSettings()` | `Settings \| null` | 获取当前激活的预设配置 |
+| `getWorldInfo()` | `[]` | 预留接口，MVP 阶段返回空数组 |
+
+**使用示例：**
+
+```javascript
+setup(props) {
+  const { h, ref, onMounted } = window.__EXT_VUE__;
+
+  const conv = props.api.getCurrentConversation();
+  const messages = props.api.getMessages();
+  const settings = props.api.getSettings();
+
+  // 用 conv.id 调用自己的后端 API
+  async function fetchMyData() {
+    if (!conv?.id) return;
+    const res = await fetch(`/api/ext/my-ext/stats?conv_id=${conv.id}`);
+    const json = await res.json();
+    // ...
+  }
+
+  return () => h('div', ...);
+}
+```
+
+> ⚠️ `getCurrentConversation()` 返回的是 `{ id }` 而非完整的 conversation 对象。需要标题、创建时间等字段时用 `getConversation(convId)`。
+
+---
+
+#### 2.4.4 前端扩展点
+
+| 扩展点 | 插槽名 | App.vue 中的位置 | 用途 |
+|--------|--------|-----------------|------|
+| `panel` | `"panel"` | 聊天界面全局区域 | 全局面板，适合悬浮窗、侧边栏等常驻 UI |
+| `message_decorator` | `"message_decorator"` | 每条消息下方（预留） | 为消息添加操作按钮、标注等 |
+
+> 要让扩展面板可见，`App.vue` 中必须有对应的 `<ExtensionSlot name="panel" />`，并在 `<script setup>` 中 `import ExtensionSlot`——漏掉 import 不会报错，但所有扩展面板会静默消失。
+
+---
+
+#### 2.4.5 CSS 样式最佳实践
+
+由于扩展组件不经过构建工具，CSS 有以下两种推荐方式：
+
+**方式 1：内联 `style` 对象（推荐用于简单样式）**
+
+```javascript
+h('div', {
+  style: {
+    padding: '12px',
+    background: '#fff',
+    borderRadius: '8px',
+    boxShadow: '0 2px 8px rgba(0,0,0,0.1)'
+  }
+}, [...])
+```
+
+**方式 2：注入 `<style>` 标签（推荐用于复杂样式）**
+
+```javascript
+(function() {
+  // 注入样式（利用 id 防止重复注入）
+  if (!document.getElementById('ext-my-styles')) {
+    const style = document.createElement('style');
+    style.id = 'ext-my-styles';
+    style.textContent = `
+      .ext-my-panel { padding: 12px; background: #fff; }
+      .ext-my-button { padding: 4px 12px; cursor: pointer; }
+      .ext-my-button:hover { opacity: 0.8; }
+    `;
+    document.head.appendChild(style);
+  }
+  // ...组件定义
+})();
+```
+
+**命名规范：**
+
+| 规则 | 示例 |
+|------|------|
+| 所有类名加 `ext-<id>-` 前缀 | `.ext-dashboard-panel` |
+| 避免使用全局 CSS 变量 | 除非应用明确提供了稳定的主题变量表 |
+| 不依赖外部 CSS 框架 | 除非扩展明确声明依赖 |
