@@ -780,3 +780,305 @@ h('div', {
 | 所有类名加 `ext-<id>-` 前缀 | `.ext-dashboard-panel` |
 | 避免使用全局 CSS 变量 | 除非应用明确提供了稳定的主题变量表 |
 | 不依赖外部 CSS 框架 | 除非扩展明确声明依赖 |
+
+---
+
+### 2.5 安装与分发
+
+#### 2.5.1 ZIP 打包规范
+
+```
+my-extension.zip
+└── my-extension/              ← 必须有一层目录包裹（目录名 = 扩展 id）
+    ├── manifest.json
+    ├── backend.py
+    └── frontend/
+        ├── index.js
+        └── components/
+            └── *.js
+```
+
+打包命令：
+
+```bash
+# Windows PowerShell
+Compress-Archive -Path test_expand/my-extension/* -DestinationPath my-extension.zip
+
+# macOS / Linux（注意进入目录打包，保证内部有一层包裹）
+cd test_expand
+zip -r ../../my-extension.zip my-extension/
+```
+
+#### 2.5.2 Git 仓库发布
+
+- 仓库根目录直接放 `manifest.json`、`backend.py`、`frontend/`
+- **不要额外嵌套**（不要 `repo/my-extension/manifest.json` 这样的结构）
+- 建议写 README.md 说明功能和用法
+- 建议打 Git tag 标记版本号（如 `v1.0.0`）
+
+```bash
+git tag v1.0.0
+git push origin v1.0.0
+```
+
+#### 2.5.3 安装流程与权限审批
+
+```
+用户在扩展管理面板操作
+  ├→ "从 ZIP 安装" → 选择 .zip 文件
+  │    └→ 后端解压 → 校验 manifest → 返回所需权限列表
+  └→ "从 Git 安装" → 输入仓库 URL
+       └→ 后端 git clone → 校验 manifest → 返回所需权限列表
+
+用户确认权限 → 写入 .registry.json + permissions_granted
+  └→ 加载扩展
+       ├→ 前端扩展：立即生效（刷新页面即可）
+       └→ api_route 扩展：需重启应用生效（路由在 Flask 启动时注册）
+```
+
+> ⚠️ **api_route 启动限制：** 通过 ZIP/Git 在运行中安装的扩展，`api_bp` 为 `None`，自定义路由不会立即生效。需要重启应用使路由注册到 Blueprint。
+
+---
+
+### 2.6 调试与排查
+
+#### 前端调试
+
+| 现象 | 检查点 |
+|------|--------|
+| 扩展完全不显示 | ① `App.vue` 是否 `import ExtensionSlot`；② `.registry.json` 中 `enabled: true`；③ Network 面板 `/api/extensions/<id>/frontend` 是否 200 |
+| `ref is not a function` | ① `window.__EXT_VUE__` 是否被 Vue 内部覆盖（检查是否误用了 `__VUE__`）；② ExtensionSlot 是否使用了 `shallowRef` + `markRaw` |
+| 面板渲染但数据不更新 | ① `props.api.getCurrentConversation()` 是否返回正确的 `id`；② 加 `console.log` 诊断 `setup()` 中的 ref 值 |
+| 脚本未执行 | Network 面板检查 `/api/extensions/<id>/frontend` 是否 200；Console 是否有 JS 错误 |
+| 组件注册了但没渲染 | 检查 `window.__EXTENSION_REGISTRY__[id][slotname]` 是否存在；slot 名是否与 manifest 中声明的一致 |
+
+#### 后端调试
+
+| 现象 | 检查点 |
+|------|--------|
+| `/api/ext/...` 返回 404 | ① `ExtensionManager.init()` 是否传了 `api_bp` 而非 `flask_app`；② 路由路径是否多加了 `/api` 前缀 |
+| 钩子不触发 | ① `manifest.json` 中 `ext_points.backend` 是否包含对应扩展点；② 函数名是否与 `EXT_POINT_TO_FUNC` 映射一致（`chat.post_receive` → `on_chat_post_receive`） |
+| 数据写入失败 | ① 存储目录是否存在；② `os.makedirs(exist_ok=True)` 是否调用；③ 是否有文件权限问题 |
+
+#### 通用诊断命令
+
+```bash
+# 查看注册表
+cat user_data/extensions/.registry.json
+
+# 确认扩展目录结构
+ls -R user_data/extensions/<ext_id>/
+
+# 查看后端日志中的扩展加载信息（搜索 "加载扩展" 或 "扩展初始化" 日志行）
+```
+
+---
+
+## 第三部分：开发注意事项
+
+> 以下内容基于 Dashboard 扩展的实际调试经验。**正文教你"怎么做"，这里告诉你"为什么容易出错"。** 开发新扩展前务必逐项阅读。
+
+### 3.1 目录结构与同步
+
+```
+chat/
+├── test_expand/                    ← 📝 开发工作目录（源码）
+│   └── <extension_id>/
+│       ├── manifest.json
+│       ├── backend.py
+│       └── frontend/
+│           ├── index.js
+│           └── components/
+│               └── *.js
+│
+├── user_data/extensions/           ← 🏃 运行时目录（实际加载）
+│   ├── .registry.json
+│   └── <extension_id>/
+│       └── ...（与 test_expand 结构相同）
+```
+
+| 规则 | 说明 |
+|------|------|
+| `test_expand/` 是开发目录 | 修改都在这里进行 |
+| `user_data/extensions/` 是运行时 | Flask 和前端只从这里加载扩展 |
+| **两个目录各自独立** | 修改 `test_expand/` 后必须手动同步到 `user_data/` |
+| `.registry.json` 驱动加载 | `enabled: true` 才会被 `load_all_enabled()` 加载 |
+| 安装方式 | ZIP 安装 / Git 克隆后调用 `add_extension()` 写入注册表 |
+
+### 3.2 前端开发避坑
+
+#### 3.2.1 必须 import ExtensionSlot
+
+`App.vue` 中使用 `<ExtensionSlot name="panel" />` 等入口时，必须在 `<script setup>` 中显式 import：
+
+```javascript
+// App.vue — 容易遗漏！
+import ExtensionSlot from "@/extensions/ExtensionSlot.vue";
+```
+
+> **教训**：Vue 3 `<script setup>` 不 import 的组件**不会渲染也不报错**，导致所有扩展面板静默消失。
+
+#### 3.2.2 永远不要用 `__VUE__`，用 `__EXT_VUE__`
+
+```javascript
+// ❌ 错误 — main.js 中
+window.__VUE__ = { h, ref, computed, watch, onMounted, onBeforeUnmount };
+
+// ✅ 正确
+window.__EXT_VUE__ = { h, ref, computed, watch, onMounted, onBeforeUnmount };
+```
+
+> **根因**：Vue 渲染器 `baseCreateRenderer()` 执行 `target.__VUE__ = true`（`vue.esm-browser.js:7766`），会**覆盖**你设置的 API 对象。`__VUE__` 是 Vue 内部保留属性，**绝对不能使用**。
+
+#### 3.2.3 组件对象必须 markRaw + shallowRef
+
+ExtensionSlot 加载组件时，**禁止**将组件定义对象推入 `ref([])`（会被深度反应化，破坏 `setup()` 闭包）：
+
+```javascript
+// ❌ 错误 — ExtensionSlot.vue
+import { ref } from 'vue';
+const components = ref([]);  // 深度反应化！
+
+// ✅ 正确
+import { shallowRef, markRaw } from 'vue';
+const components = shallowRef([]);  // 浅层引用
+
+// 注册组件时显式标记
+components.value = result.map(item => ({
+  ...item,
+  comp: markRaw(item.comp),  // 组件定义对象永不反应化
+}));
+```
+
+> **现象**：不这样做会报 `TypeError: ref is not a function`（Vue Proxy 干扰了闭包变量），以及 Vue 警告 "Component that was made a reactive object"。
+
+#### 3.2.4 setup() 内实时读取 window.__EXT_VUE__
+
+不要在 IIFE 顶层解构后靠闭包传递，改为在 `setup()` 内实时读取：
+
+```javascript
+// ✅ 推荐 — 每次 setup() 调用时从 window.__EXT_VUE__ 实时读取
+setup(props) {
+  const V = window.__EXT_VUE__;
+  if (!V || typeof V.ref !== 'function') {
+    console.error('[扩展名] window.__EXT_VUE__ 异常:', V);
+    return () => null;  // 降级：渲染空节点
+  }
+  const { h, ref, computed, watch, onMounted, onBeforeUnmount } = V;
+  // ...
+}
+```
+
+> **原因**：HMR、Electron contextIsolation 等场景下，IIFE 执行时的 `window` 状态可能与 `setup()` 执行时不一致。
+
+### 3.3 后端开发避坑
+
+#### 3.3.1 init() 传 Blueprint，不是 Flask app
+
+```python
+# backend/app/__init__.py
+
+# ❌ 错误
+get_extension_manager().init(api_bp=flask_app)
+
+# ✅ 正确
+get_extension_manager().init(api_bp=api_bp)
+```
+
+> **根因**：`flask_app` 是 Flask 实例，`api_bp` 是 `Blueprint("api", url_prefix="/api")`。传错后扩展的 `register_api_routes(api_bp)` 会把路由注册到 Flask app 上而非 Blueprint，导致 `/api/ext/...` 请求无法匹配 → 404。
+
+#### 3.3.2 扩展路由不加 /api 前缀
+
+```python
+# backend.py
+
+# ❌ 错误 — Blueprint 已有 /api 前缀
+@app.route("/api/ext/dashboard/<conv_id>/metrics")
+
+# ✅ 正确 — 路由相对于 Blueprint
+@app.route("/ext/dashboard/<conv_id>/metrics")
+```
+
+> 因为 `api_bp` 注册时带有 `url_prefix="/api"`，路由路径会自动拼接。
+
+#### 3.3.3 安全：校验动态路径参数
+
+```python
+import re
+
+_CONV_ID_PATTERN = re.compile(r'^[a-zA-Z0-9_\-]{1,64}$')
+
+def _validate_conv_id(conv_id):
+    return bool(_CONV_ID_PATTERN.match(conv_id))
+
+@app.route("/ext/dashboard/<conv_id>/metrics")
+def dashboard_metrics(conv_id):
+    if not _validate_conv_id(conv_id):
+        return jsonify({"code": 400, "message": "invalid id"}), 400
+    # ...
+```
+
+#### 3.3.4 JSON 文件读写加异常处理
+
+```python
+def _read_metrics(conv_id):
+    try:
+        with open(path, "r", encoding="utf-8") as f:
+            return json.load(f)
+    except (json.JSONDecodeError, IOError):
+        return default_value  # 文件损坏不导致 500
+```
+
+### 3.4 useExtensionApi 注意事项
+
+```javascript
+// ❌ 错误 — chat store 没有 activeConversation 属性
+getCurrentConversation() {
+  return chatStore.activeConversation;  // undefined！
+}
+
+// ✅ 正确 — 用 activeConvId
+getCurrentConversation() {
+  if (!chatStore.activeConvId) return null;
+  return { id: chatStore.activeConvId };
+}
+
+// ❌ 错误 — 同上
+getMessages() {
+  return chatStore.activeConversation?.messages || [];
+}
+
+// ✅ 正确 — chat store 直接暴露 messages
+getMessages() {
+  return chatStore.messages;
+}
+```
+
+> **教训**：添加新 API 方法前，先确认 Pinia Store 的实际 state/getter 属性名。`activeConvId` ≠ `activeConversation`。
+
+### 3.5 manifest.json 常见错误
+
+| 错误 | 后果 | 正确做法 |
+|------|------|----------|
+| `id` 与目录名不一致 | 加载失败 | 确保 manifest 中 `"id"` 与文件夹名完全相同 |
+| 权限不在 `VALID_PERMISSIONS` 中 | 安装时校验不通过 | 只使用 `permissions.py` 中定义的 6 种权限 |
+| `ext_points` 中声明了未实现的扩展点 | 加载时报错 | 声明 `api_route` 就必须实现 `register_api_routes()` |
+| `permissions_granted` 不匹配 | 安装失败 | `.registry.json` 中的 `permissions_granted` 必须覆盖 manifest 中声明的所有权限 |
+
+### 3.6 常见错误排查清单
+
+在提交扩展前，逐项确认：
+
+- [ ] `manifest.json` 中 `id` 与目录名一致
+- [ ] `.registry.json` 中 `enabled: true` 且 `permissions_granted` 匹配
+- [ ] `test_expand/` 修改已同步到 `user_data/extensions/`
+- [ ] 前端：`window.__EXT_VUE__`（不是 `__VUE__`）
+- [ ] 前端：`App.vue` 已 import `ExtensionSlot`
+- [ ] 前端：`ExtensionSlot` 使用 `shallowRef` + `markRaw`
+- [ ] 前端：`setup()` 中实时读取 `window.__EXT_VUE__`（非 IIFE 闭包）
+- [ ] 前端：`useExtensionApi` 中属性名与 Store 实际字段一致
+- [ ] 后端：`init(api_bp=api_bp)`（不是 `flask_app`）
+- [ ] 后端：扩展路由不加 `/api` 前缀
+- [ ] 后端：动态路径参数有白名单校验
+- [ ] 后端：JSON 文件读写有 `try/except`
+- [ ] 后端：使用正确的 ctx 字段名（`conversation_id`，不是 `conv_id`）
