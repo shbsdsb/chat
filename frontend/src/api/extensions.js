@@ -1,5 +1,5 @@
 // frontend/src/api/extensions.js
-import { http } from './request.js';
+import http from './request.js';
 
 export const extensionsApi = {
   list() {
