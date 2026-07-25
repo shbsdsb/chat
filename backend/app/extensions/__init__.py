@@ -19,15 +19,15 @@ class ExtensionManager:
         self.dispatcher = HookDispatcher()
         self._loaded = {}
 
-    def init(self):
+    def init(self, api_bp=None):
         """启动时初始化：加载所有已启用扩展"""
-        self._loaded = load_all_enabled(self.dispatcher)
+        self._loaded = load_all_enabled(self.dispatcher, api_bp)
         logger.info(f"扩展初始化完成: {self._loaded}")
 
-    def reload_extension(self, ext_id):
+    def reload_extension(self, ext_id, api_bp=None):
         """重新加载单个扩展（安装/更新后调用）"""
         unload_extension(ext_id, self.dispatcher, self._loaded)
-        result = load_extension(ext_id, self.dispatcher)
+        result = load_extension(ext_id, self.dispatcher, api_bp)
         self._loaded[ext_id] = result
         return result
 

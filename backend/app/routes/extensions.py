@@ -120,7 +120,7 @@ def confirm_extension(ext_id):
     })
 
     mgr = get_extension_manager()
-    result = mgr.reload_extension(ext_id)
+    result = mgr.reload_extension(ext_id, api_bp=api_bp)
 
     return ok(data={
         "id": ext_id,
@@ -158,7 +158,7 @@ def update_extension_route(ext_id):
         add_extension(ext_id, ext)
 
         mgr = get_extension_manager()
-        result = mgr.reload_extension(ext_id)
+        result = mgr.reload_extension(ext_id, api_bp=api_bp)
 
         return ok(data={"version": new_version, "status": result["status"]})
     except Exception as e:
@@ -177,7 +177,7 @@ def toggle_extension_route(ext_id):
 
     mgr = get_extension_manager()
     if enabled:
-        result = mgr.reload_extension(ext_id)
+        result = mgr.reload_extension(ext_id, api_bp=api_bp)
         return ok(data={"enabled": True, "status": result["status"]})
     else:
         _unload(ext_id, mgr.dispatcher, mgr._loaded)

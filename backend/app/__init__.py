@@ -49,6 +49,6 @@ def create_app():
     # ── 扩展系统初始化 ───────────────────────────
     from app.extensions import get_extension_manager
     os.makedirs(os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), "user_data", "extensions"), exist_ok=True)
-    get_extension_manager().init()
+    get_extension_manager().init(api_bp=api_bp)
 
     return flask_app

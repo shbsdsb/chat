@@ -18,6 +18,7 @@ EXTENSIONS_DIR = os.path.join(
 EXT_POINT_TO_FUNC = {
     "chat.post_receive": "on_chat_post_receive",
     "chat.pre_send": "on_chat_pre_send",
+    "api_route": "register_api_routes",
 }
 
 
@@ -39,7 +40,7 @@ def _load_backend_module(ext_id, ext_dir):
     return module
 
 
-def load_extension(ext_id, dispatcher):
+def load_extension(ext_id, dispatcher, api_bp=None):
     ext = get_extension(ext_id)
     if not ext:
         return {"status": "error", "message": f"扩展 {ext_id} 未在注册表中找到"}
@@ -74,8 +75,17 @@ def load_extension(ext_id, dispatcher):
         handler = getattr(module, func_name, None)
         if handler is None:
             continue
-        dispatcher.register_hook(ext_id, ext_point, handler)
-        registered.append(ext_point)
+        if ext_point == "api_route":
+            # api_route 扩展点：调用 register_api_routes(api_bp)
+            if api_bp is not None:
+                try:
+                    handler(api_bp)
+                    registered.append(ext_point)
+                except Exception:
+                    logger.exception(f"扩展 {ext_id} 注册 API 路由失败")
+        else:
+            dispatcher.register_hook(ext_id, ext_point, handler)
+            registered.append(ext_point)
 
     return {
         "status": "loaded",
@@ -94,14 +104,14 @@ def unload_extension(ext_id, dispatcher, _loaded=None):
         _loaded.pop(ext_id, None)
 
 
-def load_all_enabled(dispatcher):
+def load_all_enabled(dispatcher, api_bp=None):
     """启动时加载所有已启用的扩展"""
     data = read_registry()
     results = {}
     for ext_id, info in data.get("extensions", {}).items():
         if info.get("enabled"):
             try:
-                results[ext_id] = load_extension(ext_id, dispatcher)
+                results[ext_id] = load_extension(ext_id, dispatcher, api_bp)
             except Exception:
                 logger.exception(f"加载扩展 {ext_id} 失败")
                 results[ext_id] = {"status": "error", "message": "加载异常"}
