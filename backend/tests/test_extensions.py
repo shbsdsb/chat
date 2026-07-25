@@ -146,3 +146,51 @@ def test_check_permission_disabled_extension(tmp_path, monkeypatch):
         "permissions_granted": ["hook:chat"]
     })
     assert check_permission("disabled-ext", "hook:chat") is False
+
+
+# --- Task 4: hook dispatcher tests ---
+
+from app.extensions.hooks import HookDispatcher
+
+
+class TestHookDispatcher:
+    def test_dispatch_calls_registered_handler(self):
+        dispatcher = HookDispatcher()
+        results = []
+        def handler(ctx):
+            results.append(ctx["value"])
+            return {"meta": {"hit": ctx["value"]}}
+        dispatcher.register_hook("test-ext", "chat.post_receive", handler)
+        output = dispatcher.dispatch("chat.post_receive", {"value": 42})
+        assert results == [42]
+        assert output == [{"extension_id": "test-ext", "message_meta": {"hit": 42}}]
+
+    def test_dispatch_multiple_extensions(self):
+        dispatcher = HookDispatcher()
+        calls = []
+        dispatcher.register_hook("ext-a", "chat.post_receive", lambda ctx: calls.append("a"))
+        dispatcher.register_hook("ext-b", "chat.post_receive", lambda ctx: calls.append("b"))
+        dispatcher.dispatch("chat.post_receive", {})
+        assert calls == ["a", "b"]
+
+    def test_dispatch_handler_exception_does_not_block_others(self):
+        dispatcher = HookDispatcher()
+        calls = []
+        def bad_handler(ctx):
+            raise RuntimeError("boom")
+        dispatcher.register_hook("bad-ext", "chat.post_receive", bad_handler)
+        dispatcher.register_hook("good-ext", "chat.post_receive", lambda ctx: calls.append("good"))
+        dispatcher.dispatch("chat.post_receive", {})
+        assert calls == ["good"]
+
+    def test_unregister_extension_removes_handlers(self):
+        dispatcher = HookDispatcher()
+        dispatcher.register_hook("test-ext", "chat.post_receive", lambda ctx: None)
+        dispatcher.unregister_extension("test-ext")
+        output = dispatcher.dispatch("chat.post_receive", {})
+        assert output == []
+
+    def test_dispatch_unknown_ext_point(self):
+        dispatcher = HookDispatcher()
+        output = dispatcher.dispatch("nonexistent", {})
+        assert output == []
