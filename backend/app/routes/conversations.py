@@ -25,7 +25,7 @@ def _conv_to_dict(row):
 
 
 def _stream_and_save(settings, messages, conv_id, cancel_event,
-                     temperature=None, max_tokens=None, top_p=None):
+                     temperature=None, max_tokens=None, top_p=None, request_body=None):
     """Shared SSE generator: stream AI response, save assistant message, unregister."""
 
     full_content = ""
@@ -61,14 +61,39 @@ def _stream_and_save(settings, messages, conv_id, cancel_event,
                 yield f"data: {json.dumps({'done': True})}\n\n"
     finally:
         if full_content or full_reasoning:
-            add_message({
+            msg_data = {
                 "id": assistant_msg_id,
                 "conversation_id": conv_id,
                 "role": "assistant",
                 "content": full_content,
                 "reasoning_content": full_reasoning,
                 "created_at": assistant_created,
-            })
+            }
+            # ── 扩展钩子：chat.post_receive ──
+            from app.extensions import get_extension_manager
+            mgr = get_extension_manager()
+            # 收集 World Info 条目（当前阶段传空列表，后续 World Info 实现后替换）
+            world_info_entries = request_body.get("_world_info_entries", []) if isinstance(request_body, dict) else []
+            hook_ctx = {
+                "conversation_id": conv_id,
+                "messages": messages + [{"role": "assistant", "content": full_content}],
+                "request_body": {"model": settings.get("model"), "messages": messages},
+                "response_body": {"content": full_content, "reasoning_content": full_reasoning},
+                "world_info_entries": world_info_entries,
+                "settings": settings,
+            }
+            ext_results = mgr.dispatcher.dispatch("chat.post_receive", hook_ctx)
+            # 合并扩展返回的 message_meta
+            ext_data = {}
+            for result in ext_results:
+                eid = result.get("extension_id", "")
+                meta = result.get("message_meta", {})
+                if meta:
+                    ext_data[eid] = meta
+            if ext_data:
+                msg_data["extensions"] = ext_data
+
+            add_message(msg_data)
         sse_manager.unregister(conv_id)
 
 
@@ -154,7 +179,8 @@ def chat(conv_id):
 
     return Response(
         stream_with_context(_stream_and_save(settings, messages, conv_id, cancel_event,
-                                             temperature=temperature, max_tokens=max_tokens, top_p=top_p)),
+                                             temperature=temperature, max_tokens=max_tokens, top_p=top_p,
+                                             request_body=body)),
         mimetype="text/event-stream",
         headers={
             "Cache-Control": "no-cache",
@@ -214,7 +240,8 @@ def regenerate(conv_id):
 
     return Response(
         stream_with_context(_stream_and_save(settings, messages, conv_id, cancel_event,
-                                             temperature=temperature, max_tokens=max_tokens, top_p=top_p)),
+                                             temperature=temperature, max_tokens=max_tokens, top_p=top_p,
+                                             request_body=body)),
         mimetype="text/event-stream",
         headers={
             "Cache-Control": "no-cache",
