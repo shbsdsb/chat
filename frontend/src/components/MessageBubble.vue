@@ -69,6 +69,9 @@
                     <div v-else class="bubble-text">{{ message.content }}</div>
                 </template>
             </template>
+
+            <!-- 扩展：message_decorator 插槽 -->
+            <ExtensionSlot name="message_decorator" :message="message" :conversation="chatStore.activeConversation" />
         </div>
     </div>
 </template>
@@ -78,6 +81,7 @@ import { ref, computed, watch, onMounted, onBeforeUnmount, nextTick, createApp }
 import { useMarkdown } from "@/composables/useMarkdown.js";
 import { useChatStore } from "@/stores/chat";
 import HtmlPreview from "@/components/HtmlPreview.vue";
+import ExtensionSlot from "@/extensions/ExtensionSlot.vue";
 
 const props = defineProps({
   message: { type: Object, required: true },
