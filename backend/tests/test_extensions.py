@@ -107,3 +107,42 @@ def test_uninstall_extension(tmp_path, monkeypatch):
         f.write("{}")
     uninstall_extension("to-remove")
     assert not os.path.exists(ext_path)
+
+
+# --- Task 3: permission tests ---
+
+from app.extensions.permissions import check_permission, validate_permissions, VALID_PERMISSIONS
+
+
+def test_validate_permissions_filters_invalid():
+    result = validate_permissions(["hook:chat", "read:conversations", "invalid:perm"])
+    assert "hook:chat" in result
+    assert "read:conversations" in result
+    assert "invalid:perm" not in result
+
+
+def test_check_permission_granted(tmp_path, monkeypatch):
+    from app.extensions.registry import add_extension
+    reg_file = tmp_path / ".registry.json"
+    monkeypatch.setattr("app.extensions.registry.get_registry_path", lambda: str(reg_file))
+    add_extension("test-ext", {
+        "version": "1.0.0", "enabled": True,
+        "installed_at": "2026-01-01T00:00:00Z",
+        "install_method": "zip",
+        "permissions_granted": ["hook:chat", "read:conversations"]
+    })
+    assert check_permission("test-ext", "hook:chat") is True
+    assert check_permission("test-ext", "read:world_info") is False
+
+
+def test_check_permission_disabled_extension(tmp_path, monkeypatch):
+    from app.extensions.registry import add_extension
+    reg_file = tmp_path / ".registry.json"
+    monkeypatch.setattr("app.extensions.registry.get_registry_path", lambda: str(reg_file))
+    add_extension("disabled-ext", {
+        "version": "1.0.0", "enabled": False,
+        "installed_at": "2026-01-01T00:00:00Z",
+        "install_method": "zip",
+        "permissions_granted": ["hook:chat"]
+    })
+    assert check_permission("disabled-ext", "hook:chat") is False
