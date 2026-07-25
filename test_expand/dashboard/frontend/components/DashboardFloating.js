@@ -1,4 +1,4 @@
-import { h, ref, computed, onMounted, onBeforeUnmount } from 'vue';
+const { h, ref, computed, onMounted, onBeforeUnmount } = window.__VUE__;
 
 const MAX_TOKENS = 100_000_000;
 

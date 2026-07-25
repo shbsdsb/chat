@@ -200,20 +200,37 @@ def cancel_install():
 
 @api_bp.route("/extensions/<ext_id>/frontend")
 def get_extension_frontend(ext_id):
-    """返回扩展前端入口 JS 代码。"""
+    """返回扩展前端入口 JS（组件代码 + index.js 合并）。"""
     ext = get_extension(ext_id)
     if not ext:
         return fail(404, "扩展不存在")
     if not ext.get("enabled"):
         return fail(403, "扩展已禁用")
 
-    frontend_path = os.path.join(_reg.EXTENSIONS_DIR, ext_id, "frontend.js")
-    if not os.path.isfile(frontend_path):
-        return fail(404, "frontend.js 不存在")
+    frontend_dir = os.path.join(_reg.EXTENSIONS_DIR, ext_id, "frontend")
+    if not os.path.isdir(frontend_dir):
+        return fail(404, "frontend 目录不存在")
 
-    with open(frontend_path, "r", encoding="utf-8") as f:
-        code = f.read()
-    return Response(code, mimetype="application/javascript")
+    # 收集所有 .js 文件：先 components/ 再 index.js
+    scripts = []
+    comp_dir = os.path.join(frontend_dir, "components")
+    if os.path.isdir(comp_dir):
+        for fname in sorted(os.listdir(comp_dir)):
+            if fname.endswith(".js"):
+                with open(os.path.join(comp_dir, fname), "r", encoding="utf-8") as f:
+                    code = f.read()
+                # 将 import 替换为全局变量引用（扩展不使用 ES import）
+                scripts.append(code)
+
+    index_path = os.path.join(frontend_dir, "index.js")
+    if os.path.isfile(index_path):
+        with open(index_path, "r", encoding="utf-8") as f:
+            scripts.append(f.read())
+
+    if not scripts:
+        return fail(404, "无前端脚本文件")
+
+    return Response("\n;\n".join(scripts), mimetype="application/javascript")
 
 
 @api_bp.route("/extensions/<ext_id>/manifest")
