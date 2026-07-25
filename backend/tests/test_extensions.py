@@ -1,8 +1,14 @@
+import json
 import os
+import zipfile
+
 import pytest
 from app.extensions.registry import (
     get_registry_path, read_registry, write_registry,
     get_extension, add_extension, remove_extension, set_extension_state,
+)
+from app.extensions.installer import (
+    install_from_zip, uninstall_extension,
 )
 
 
@@ -58,3 +64,46 @@ def test_set_extension_state(tmp_path, monkeypatch):
     add_extension("test-ext", {"version": "1.0.0", "enabled": True, "installed_at": "2026-01-01T00:00:00Z", "install_method": "zip", "permissions_granted": []})
     set_extension_state("test-ext", False)
     assert get_extension("test-ext")["enabled"] is False
+
+
+# --- Task 2: installer tests ---
+
+def test_install_from_zip(tmp_path, monkeypatch):
+    ext_dir = tmp_path / "extensions"
+    monkeypatch.setattr("app.extensions.installer.EXTENSIONS_DIR", str(ext_dir))
+    os.makedirs(ext_dir)
+
+    # 创建测试 zip
+    zip_path = tmp_path / "test-ext.zip"
+    manifest = {"id": "test-ext", "name": "Test", "version": "1.0.0",
+                "permissions": [], "ext_points": {"backend": [], "frontend": []},
+                "min_app_version": "1.0.0"}
+    with zipfile.ZipFile(zip_path, "w") as zf:
+        zf.writestr("manifest.json", json.dumps(manifest))
+        zf.writestr("backend.py", "def on_chat_post_receive(ctx): return None\n")
+
+    result = install_from_zip(str(zip_path))
+    assert result[0] == "test-ext"  # (ext_id, name)
+    assert os.path.isfile(os.path.join(ext_dir, "test-ext", "manifest.json"))
+    assert os.path.isfile(os.path.join(ext_dir, "test-ext", "backend.py"))
+
+
+def test_install_from_zip_invalid_no_manifest(tmp_path, monkeypatch):
+    ext_dir = tmp_path / "extensions"
+    monkeypatch.setattr("app.extensions.installer.EXTENSIONS_DIR", str(ext_dir))
+    zip_path = tmp_path / "bad.zip"
+    with zipfile.ZipFile(zip_path, "w") as zf:
+        zf.writestr("readme.txt", "no manifest here")
+    with pytest.raises(ValueError, match="manifest.json"):
+        install_from_zip(str(zip_path))
+
+
+def test_uninstall_extension(tmp_path, monkeypatch):
+    ext_dir = tmp_path / "extensions"
+    monkeypatch.setattr("app.extensions.installer.EXTENSIONS_DIR", str(ext_dir))
+    ext_path = os.path.join(ext_dir, "to-remove")
+    os.makedirs(ext_path)
+    with open(os.path.join(ext_path, "manifest.json"), "w") as f:
+        f.write("{}")
+    uninstall_extension("to-remove")
+    assert not os.path.exists(ext_path)
