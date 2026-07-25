@@ -359,3 +359,221 @@ manifest.json 是扩展的声明文件，应用通过它了解扩展的身份、
 ```
 
 > 参考：`test_expand/dashboard/manifest.json`
+
+---
+
+### 2.3 后端开发
+
+#### 2.3.1 生命周期钩子详解
+
+钩子是扩展介入应用行为的入口。在 manifest 中声明对应的 `ext_points.backend`，然后在 backend.py 中实现同名函数即可。
+
+##### chat.post_receive — AI 响应完成后触发
+
+```python
+# backend.py
+def on_chat_post_receive(ctx):
+    """
+    AI 回复完成后调用。每个扩展独立执行，互不影响。
+
+    ctx 结构（dict）：
+    {
+        "conversation_id": str,    # 会话 ID
+        "messages": [              # 完整消息历史（含刚完成的 AI 回复）
+            {"role": "user" | "assistant", "content": str, ...},
+            ...
+        ],
+        "request_body": {          # 发送给 AI 的请求体
+            "model": str,
+            "messages": [...],
+        },
+        "response_body": {         # AI 返回的响应体
+            "content": str,
+            "reasoning_content": str | None,  # 推理内容（o1 等模型）
+        },
+        "world_info_entries": list,  # World Info 条目列表
+        "settings": {              # 当前使用的预设配置
+            "api_key": "sk-...",
+            "base_url": "https://...",
+            "model": str,
+            ...
+        },
+    }
+
+    返回值（可选）：dict，会合并到前端消息对象的 extensions 字段
+    """
+    conv_id = ctx.get("conversation_id")
+    if not conv_id:
+        return None
+
+    response_body = ctx.get("response_body", {})
+    content = response_body.get("content", "")
+
+    # 示例：统计 token 数量
+    token_count = len(content.split())
+
+    # 写入自己的数据文件（见 2.3.3 数据持久化）
+    _save_stats(conv_id, {"tokens": token_count})
+
+    # 返回值会合并到消息的 extensions 字段
+    return {"token_count": token_count}
+```
+
+**行为规范：**
+
+| 行为 | 说明 |
+|------|------|
+| 超时 | 30 秒，超时后强制中断并记录警告日志 |
+| 异常处理 | 单个扩展报错不影响其他扩展，异常会被捕获并记录 |
+| 返回值 | 可选。若返回 dict，会以 `{ extension_id: {...} }` 格式合并到消息的 `extensions` 字段 |
+| 线程安全 | 每个 handler 在独立线程中执行 |
+
+> ⚠️ 不要在钩子中执行耗时操作（如调用外部 API 且不设超时）。30 秒超时后会中断，且可能影响后续扩展的执行调度。
+
+##### chat.pre_send — 消息发送前触发
+
+```python
+def on_chat_pre_send(ctx):
+    """
+    消息发送给 AI 前调用。
+
+    ctx 结构：
+    {
+        "conversation_id": str,
+        "messages": [...],          # 当前消息历史
+        "pending_message": {...},   # 即将发送的消息
+        "settings": {...},
+    }
+
+    返回值可修改 pending_message 的内容。
+    """
+    # 示例：在发送前添加系统提示
+    pending = ctx.get("pending_message", {})
+    pending["content"] = "[系统提示：请用中文回答]\n" + pending.get("content", "")
+    return {"modified": True}
+```
+
+> ⚠️ 此钩子已在 loader.py 中定义映射（`"chat.pre_send" → "on_chat_pre_send"`），但尚未在 conversations.py 中 dispatch，当前不会触发。后续版本将启用。
+
+---
+
+#### 2.3.2 自定义 API 路由
+
+在 manifest 中声明 `ext_points.backend: ["api_route"]`，实现 `register_api_routes(app)`：
+
+```python
+# backend.py
+import re
+from flask import request, jsonify
+
+# 输入校验正则（白名单）
+_CONV_ID_PATTERN = re.compile(r'^[a-zA-Z0-9_\-]{1,64}$')
+
+def _validate_conv_id(conv_id):
+    return bool(_CONV_ID_PATTERN.match(conv_id))
+
+def register_api_routes(app):
+    """app 是 Blueprint 对象，不是 Flask 实例"""
+
+    @app.route("/ext/<ext_id>/metrics", methods=["GET"])
+    def get_metrics(ext_id):
+        conv_id = request.args.get("conv_id", "")
+        if not _validate_conv_id(conv_id):
+            return jsonify({"code": 400, "message": "invalid conv_id"}), 400
+
+        data = _read_metrics(conv_id)
+        return jsonify({"code": 0, "data": data})
+
+    @app.route("/ext/<ext_id>/metrics", methods=["POST"])
+    def save_metrics(ext_id):
+        body = request.get_json(silent=True) or {}
+        conv_id = body.get("conv_id", "")
+        if not _validate_conv_id(conv_id):
+            return jsonify({"code": 400, "message": "invalid conv_id"}), 400
+
+        _write_metrics(conv_id, body.get("data", {}))
+        return jsonify({"code": 0})
+```
+
+**路由注册四要诀：**
+
+| 要诀 | 说明 | 错误示例 |
+|------|------|----------|
+| **路由不加 `/api` 前缀** | Blueprint 已有 `url_prefix="/api"`，最终路径自动拼接为 `/api/ext/...` | `@app.route("/api/ext/...")` |
+| **校验动态参数** | 所有来自 URL 或请求体的参数，必须用正则白名单校验 | 直接 `open(path + conv_id)` |
+| **统一响应格式** | 成功 `{"code": 0, "data": ...}`，失败 `{"code": 非0, "message": "..."}` | 直接 return dict |
+| **异常兜底** | JSON 解析和文件读写必须 try/except（见 2.3.3） | 裸 `json.load()` |
+
+> 完整示例参考：`test_expand/dashboard/backend.py` 的 `register_api_routes()` 函数。
+
+---
+
+#### 2.3.3 数据持久化
+
+扩展有自己的存储目录：`user_data/ext_data/<ext_id>/`。以下是推荐的数据读写封装：
+
+```python
+import json
+import os
+import threading
+
+# 存储根目录
+_STORAGE_DIR = os.path.join(
+    os.path.dirname(os.path.abspath(__file__)),
+    "..", "..", "user_data", "ext_data"
+)
+
+# 每个扩展一个专属子目录
+def _get_ext_dir(ext_id):
+    dir_path = os.path.join(_STORAGE_DIR, ext_id)
+    os.makedirs(dir_path, exist_ok=True)
+    return dir_path
+
+def _get_file_path(ext_id, filename):
+    return os.path.join(_get_ext_dir(ext_id), filename)
+
+# 线程安全的 JSON 读写
+_lock = threading.Lock()
+
+def _read_json(ext_id, filename, default=None):
+    path = _get_file_path(ext_id, filename)
+    try:
+        with open(path, "r", encoding="utf-8") as f:
+            return json.load(f)
+    except (json.JSONDecodeError, IOError, FileNotFoundError):
+        return default
+
+def _write_json(ext_id, filename, data):
+    path = _get_file_path(ext_id, filename)
+    with _lock:
+        with open(path, "w", encoding="utf-8") as f:
+            json.dump(data, f, ensure_ascii=False, indent=2)
+```
+
+**文件命名建议：** 以会话 ID 为文件名，如 `<conv_id>_stats.json`，便于按会话隔离数据。
+
+---
+
+#### 2.3.4 后端 API 参考
+
+扩展的 backend.py 中可直接 import 以下应用内部函数：
+
+| 函数 | 来源 | 签名 | 用途 |
+|------|------|------|------|
+| `get_conversation(conv_id)` | `app.storage` | `str -> dict \| None` | 读取会话元数据（标题、创建时间等） |
+| `list_conversations()` | `app.storage` | `() -> list[dict]` | 列出所有会话 |
+| `get_messages(conv_id)` | `app.storage` | `str -> list[dict]` | 读取会话的完整消息列表 |
+| `get_setting(preset_id)` | `app.storage` | `str -> dict \| None` | 读取单个预设配置 |
+| `list_settings_raw()` | `app.storage` | `() -> list[dict]` | 列出所有预设配置 |
+
+```python
+# 用法示例
+from app.storage import get_messages, get_conversation
+
+def on_chat_post_receive(ctx):
+    conv = get_conversation(ctx.get("conversation_id"))
+    msgs = get_messages(ctx.get("conversation_id"))
+    # ...
+```
+
+> 前端 Store 访问请参见 2.4.3 useExtensionApi。
