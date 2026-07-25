@@ -11,7 +11,7 @@ logger = logging.getLogger(__name__)
 
 _PACKAGE_DIR = os.path.dirname(__file__)
 EXTENSIONS_DIR = os.path.join(
-    os.path.dirname(os.path.dirname(_PACKAGE_DIR)),
+    os.path.dirname(os.path.dirname(os.path.dirname(_PACKAGE_DIR))),
     "user_data", "extensions"
 )
 
