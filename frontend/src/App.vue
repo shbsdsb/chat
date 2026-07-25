@@ -34,6 +34,7 @@
         </Transition>
       </SettingsDrawer>
     </div>
+    <ExtensionSlot name="panel" />
     <AlertDialog />
   </div>
 </template>
