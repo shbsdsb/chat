@@ -32,9 +32,16 @@ class HookDispatcher:
                 if result is not None:
                     if isinstance(result, dict):
                         result.setdefault("extension_id", ext_id)
-                        # 规范化：handler 返回的 "meta" 重命名为 "message_meta"
+                        # 规范化：统一转换为 {extension_id, message_meta} 格式
                         if "meta" in result and "message_meta" not in result:
                             result["message_meta"] = result.pop("meta")
+                        if "message_meta" not in result:
+                            # 非标准格式：整体包装为 message_meta
+                            ext_id_val = result.pop("extension_id")
+                            result = {
+                                "extension_id": ext_id_val,
+                                "message_meta": result,
+                            }
                         results.append(result)
                     else:
                         results.append({

@@ -194,3 +194,111 @@ class TestHookDispatcher:
         dispatcher = HookDispatcher()
         output = dispatcher.dispatch("nonexistent", {})
         assert output == []
+
+
+# --- Task 5: loader tests ---
+
+from app.extensions.loader import load_extension, unload_extension, load_all_enabled
+
+
+def test_load_extension_registers_hooks(tmp_path, monkeypatch):
+    ext_dir = tmp_path / "extensions"
+    monkeypatch.setattr("app.extensions.installer.EXTENSIONS_DIR", str(ext_dir))
+    monkeypatch.setattr("app.extensions.loader.EXTENSIONS_DIR", str(ext_dir))
+    reg_file = tmp_path / ".registry.json"
+    monkeypatch.setattr("app.extensions.registry.get_registry_path", lambda: str(reg_file))
+
+    # 创建扩展目录
+    ext_path = os.path.join(ext_dir, "test-loader")
+    os.makedirs(ext_path)
+    manifest = {"id": "test-loader", "name": "Loader Test", "version": "1.0.0",
+                "permissions": ["hook:chat"], "ext_points": {"backend": ["chat.post_receive"]},
+                "min_app_version": "1.0.0"}
+    with open(os.path.join(ext_path, "manifest.json"), "w") as f:
+        json.dump(manifest, f)
+    with open(os.path.join(ext_path, "backend.py"), "w") as f:
+        f.write("def on_chat_post_receive(ctx): return {'hit': len(ctx.get('messages', []))}\n")
+
+    # 注册到注册表
+    from app.extensions.registry import add_extension, write_registry
+    write_registry({"extensions": {}})
+    add_extension("test-loader", {
+        "version": "1.0.0", "enabled": True,
+        "installed_at": "2026-01-01T00:00:00Z",
+        "install_method": "zip",
+        "permissions_granted": ["hook:chat"]
+    })
+
+    from app.extensions.hooks import HookDispatcher
+    dispatcher = HookDispatcher()
+    result = load_extension("test-loader", dispatcher)
+    assert result["status"] == "loaded"
+
+    output = dispatcher.dispatch("chat.post_receive", {"messages": [1, 2, 3]})
+    assert len(output) == 1
+    assert output[0]["message_meta"]["hit"] == 3
+
+
+def test_load_extension_missing_backend_py(tmp_path, monkeypatch):
+    ext_dir = tmp_path / "extensions"
+    monkeypatch.setattr("app.extensions.installer.EXTENSIONS_DIR", str(ext_dir))
+    monkeypatch.setattr("app.extensions.loader.EXTENSIONS_DIR", str(ext_dir))
+    reg_file = tmp_path / ".registry.json"
+    monkeypatch.setattr("app.extensions.registry.get_registry_path", lambda: str(reg_file))
+
+    ext_path = os.path.join(ext_dir, "no-backend")
+    os.makedirs(ext_path)
+    manifest = {"id": "no-backend", "name": "No Backend", "version": "1.0.0",
+                "permissions": [], "ext_points": {"frontend": ["message_decorator"]},
+                "min_app_version": "1.0.0"}
+    with open(os.path.join(ext_path, "manifest.json"), "w") as f:
+        json.dump(manifest, f)
+
+    from app.extensions.registry import add_extension, write_registry
+    write_registry({"extensions": {}})
+    add_extension("no-backend", {
+        "version": "1.0.0", "enabled": True,
+        "installed_at": "2026-01-01T00:00:00Z",
+        "install_method": "zip",
+        "permissions_granted": []
+    })
+
+    from app.extensions.hooks import HookDispatcher
+    dispatcher = HookDispatcher()
+    result = load_extension("no-backend", dispatcher)
+    # 纯前端扩展加载应该成功
+    assert result["status"] == "loaded"
+
+
+def test_unload_extension_removes_from_dispatcher(tmp_path, monkeypatch):
+    ext_dir = tmp_path / "extensions"
+    monkeypatch.setattr("app.extensions.installer.EXTENSIONS_DIR", str(ext_dir))
+    monkeypatch.setattr("app.extensions.loader.EXTENSIONS_DIR", str(ext_dir))
+    reg_file = tmp_path / ".registry.json"
+    monkeypatch.setattr("app.extensions.registry.get_registry_path", lambda: str(reg_file))
+
+    ext_path = os.path.join(ext_dir, "to-unload")
+    os.makedirs(ext_path)
+    with open(os.path.join(ext_path, "manifest.json"), "w") as f:
+        json.dump({"id": "to-unload", "name": "X", "version": "1.0.0",
+                   "permissions": ["hook:chat"], "ext_points": {"backend": ["chat.post_receive"]},
+                   "min_app_version": "1.0.0"}, f)
+    with open(os.path.join(ext_path, "backend.py"), "w") as f:
+        f.write("def on_chat_post_receive(ctx): return None\n")
+
+    # 注册到注册表
+    from app.extensions.registry import add_extension, write_registry
+    write_registry({"extensions": {}})
+    add_extension("to-unload", {
+        "version": "1.0.0", "enabled": True,
+        "installed_at": "2026-01-01T00:00:00Z",
+        "install_method": "zip",
+        "permissions_granted": ["hook:chat"]
+    })
+
+    from app.extensions.hooks import HookDispatcher
+    dispatcher = HookDispatcher()
+    load_extension("to-unload", dispatcher)
+    unload_extension("to-unload", dispatcher)
+    output = dispatcher.dispatch("chat.post_receive", {})
+    assert output == []
