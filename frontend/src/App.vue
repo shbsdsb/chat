@@ -9,7 +9,7 @@
         <CssPresetSelector @open-drawer="toggleDrawer('css')" />
         <button class="top-btn" @click="toggleDrawer('presets')">预设</button>
         <button class="top-btn" @click="toggleDrawer('api')">API 设置</button>
-        <button class="top-btn" @click="showExtensions = !showExtensions">🧩 扩展</button>
+        <button class="top-btn" @click="toggleDrawer('extensions')">🧩 扩展</button>
       </nav>
     </header>
     <div class="app-body">
@@ -30,9 +30,9 @@
           <SettingsView v-if="activeDrawer === 'api'" key="api" @saved="activeDrawer = null" />
           <ParamPresetSelector v-else-if="activeDrawer === 'presets'" key="presets" @saved="activeDrawer = null" />
           <CssPresetEditor v-else-if="activeDrawer === 'css'" key="css" />
+          <ExtensionManager v-else-if="activeDrawer === 'extensions'" key="extensions" />
         </Transition>
       </SettingsDrawer>
-      <ExtensionManager :visible="showExtensions" @close="showExtensions = false" />
     </div>
     <AlertDialog />
   </div>
@@ -58,12 +58,11 @@ const paramPresetsStore = useParamPresetsStore();
 const cssPresetsStore = useCssPresetsStore();
 const extensionsStore = useExtensionsStore();
 const showConversations = ref(false);
-const showExtensions = ref(false);
 
-// 单状态互斥：三个设置抽屉共用一个 activeDrawer
-const activeDrawer = ref(null); // null | 'api' | 'presets' | 'css'
+// 单状态互斥：四个设置抽屉共用一个 activeDrawer
+const activeDrawer = ref(null); // null | 'api' | 'presets' | 'css' | 'extensions'
 
-const drawerTitles = { api: "API 设置", presets: "预设", css: "自定义 CSS" };
+const drawerTitles = { api: "API 设置", presets: "预设", css: "自定义 CSS", extensions: "扩展管理" };
 const drawerTitle = computed(() => drawerTitles[activeDrawer.value] || "");
 
 function toggleDrawer(name) {
