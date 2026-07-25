@@ -83,6 +83,8 @@ def load_extension(ext_id, dispatcher, api_bp=None):
                     registered.append(ext_point)
                 except Exception:
                     logger.exception(f"扩展 {ext_id} 注册 API 路由失败")
+            else:
+                logger.info(f"扩展 {ext_id} 的 api_route 将在重启后生效（运行时安装不支持动态注册路由）")
         else:
             dispatcher.register_hook(ext_id, ext_point, handler)
             registered.append(ext_point)
