@@ -10,9 +10,10 @@
 </template>
 
 <script setup>
-import { ref, watch, onMounted } from 'vue';
+import { shallowRef, ref, watch, onMounted, markRaw } from 'vue';
 import { useExtensionsStore } from '@/stores/extensions';
 import { createExtensionApi } from './useExtensionApi';
+import { extensionsApi } from '@/api/extensions';
 
 const props = defineProps({
   name: { type: String, required: true },
@@ -21,72 +22,82 @@ const props = defineProps({
 });
 
 const extensionsStore = useExtensionsStore();
-const components = ref([]);
-const loadedIds = new Set();
+const components = shallowRef([]);
+const loadedIds = (window.__EXTENSION_SCRIPTS_LOADED__ =
+  window.__EXTENSION_SCRIPTS_LOADED__ || new Set());
+const settingsMap = ref({});
+
+async function loadSettings() {
+  const map = {};
+  await Promise.all(
+    extensionsStore.enabledExtensions.map(async (ext) => {
+      try {
+        const s = await extensionsApi.getSettings(ext.id);
+        map[ext.id] = s;
+      } catch {
+        map[ext.id] = { features: {} };
+      }
+    })
+  );
+  settingsMap.value = map;
+}
 
 async function loadExtensionFrontend(ext) {
   if (!ext.frontend || loadedIds.has(ext.id)) {
-    console.log(`[ExtensionSlot:${props.name}] skip ${ext.id}: frontend=${ext.frontend} loaded=${loadedIds.has(ext.id)}`);
     return;
   }
-  loadedIds.add(ext.id);
-  console.log(`[ExtensionSlot:${props.name}] loading frontend for ${ext.id}`);
 
   try {
     const resp = await fetch(`/api/extensions/${ext.id}/frontend`);
-    console.log(`[ExtensionSlot:${props.name}] fetch ${ext.id}: status=${resp.status}`);
     if (!resp.ok) return;
     const code = await resp.text();
-    console.log(`[ExtensionSlot:${props.name}] got ${code.length} chars for ${ext.id}`);
     const script = document.createElement('script');
     script.textContent = code;
     document.head.appendChild(script);
-    console.log(`[ExtensionSlot:${props.name}] script injected for ${ext.id}`);
+    loadedIds.add(ext.id);
   } catch (e) {
-    console.warn(`[ExtensionSlot:${props.name}] 加载 ${ext.id} 失败:`, e);
+    console.error(`[ExtensionSlot] 扩展 ${ext.id} 加载失败:`, e);
   }
 }
 
 function loadComponents() {
   const registry = window.__EXTENSION_REGISTRY__ || {};
-  console.log(`[ExtensionSlot:${props.name}] loadComponents: registry keys=`, Object.keys(registry), 'enabledExts=', extensionsStore.enabledExtensions.map(e => e.id));
   const result = [];
   for (const ext of extensionsStore.enabledExtensions) {
     const extRegistry = registry[ext.id];
-    console.log(`[ExtensionSlot:${props.name}]   ext ${ext.id}: in registry=${!!extRegistry}`);
     if (!extRegistry) continue;
     for (const [slotName, comps] of Object.entries(extRegistry)) {
       if (slotName !== props.name) continue;
       for (const Comp of comps) {
         result.push({
-          comp: Comp,
+          comp: markRaw(Comp),
           props: {
             message: props.message,
             conversation: props.conversation,
             api: createExtensionApi(ext.id),
+            settings: settingsMap.value[ext.id] || { features: {} },
           },
         });
       }
     }
   }
-  console.log(`[ExtensionSlot:${props.name}] loadComponents: result=${result.length} components`);
   components.value = result;
 }
 
-onMounted(() => {
-  console.log(`[ExtensionSlot:${props.name}] mounted, items=`, extensionsStore.items.length, 'enabled=', extensionsStore.enabledExtensions.length);
-  for (const ext of extensionsStore.enabledExtensions) {
-    loadExtensionFrontend(ext);
-  }
+async function loadAllAndRender() {
+  await Promise.all(
+    extensionsStore.enabledExtensions.map(e => loadExtensionFrontend(e))
+  );
+  await loadSettings();
   loadComponents();
+}
+
+onMounted(() => {
+  loadAllAndRender();
 });
 
 watch(() => extensionsStore.items, () => {
-  console.log(`[ExtensionSlot:${props.name}] items changed, count=`, extensionsStore.items.length);
-  for (const ext of extensionsStore.enabledExtensions) {
-    loadExtensionFrontend(ext);
-  }
-  loadComponents();
+  loadAllAndRender();
 }, { deep: true });
 </script>
 

@@ -38,6 +38,7 @@
           </label>
           <button class="ext-btn ext-btn-update" @click="onUpdate(ext)">更新</button>
           <button class="ext-btn ext-btn-uninstall" @click="confirmUninstall(ext)">卸载</button>
+          <button class="ext-btn ext-btn-detail" @click="store.openDetail(ext)">详情</button>
         </div>
       </div>
     </div>
@@ -119,6 +120,7 @@
         <button class="dialog-btn dialog-btn-danger" @click="onUninstall">确认卸载</button>
       </template>
     </BaseDialog>
+    <ExtensionDetailDrawer />
   </div>
 </template>
 
@@ -126,6 +128,7 @@
 import { ref } from 'vue';
 import { useExtensionsStore } from '@/stores/extensions';
 import BaseDialog from '@/components/BaseDialog.vue';
+import ExtensionDetailDrawer from '@/components/ExtensionDetailDrawer.vue';
 
 const store = useExtensionsStore();
 
@@ -259,6 +262,16 @@ function onUpdate(ext) {
 }
 .ext-btn-uninstall:hover {
   background: #fff5f5;
+}
+
+.ext-btn-detail {
+  background: #fff;
+  color: #666;
+  border-color: #ddd;
+}
+.ext-btn-detail:hover {
+  background: #f5f5f5;
+  color: #333;
 }
 
 /* 扩展列表 */

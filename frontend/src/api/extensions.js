@@ -37,4 +37,10 @@ export const extensionsApi = {
   toggle(extId, enabled) {
     return http.post(`/extensions/${extId}/toggle`, { enabled });
   },
+  getSettings(extId) {
+    return http.get(`/extensions/${extId}/settings`);
+  },
+  saveSettings(extId, settings) {
+    return http.put(`/extensions/${extId}/settings`, settings);
+  },
 };

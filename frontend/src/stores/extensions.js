@@ -7,6 +7,9 @@ export const useExtensionsStore = defineStore('extensions', {
     items: [],               // [{ id, name, description, version, enabled, ... }]
     pendingApproval: null,   // 待审批的扩展信息
     loading: false,
+    detailExt: null,        // 当前查看详情的扩展对象
+    detailSettings: null,   // { features: {...} }
+    detailLoading: false,
   }),
 
   getters: {
@@ -60,6 +63,38 @@ export const useExtensionsStore = defineStore('extensions', {
     async toggle(extId, enabled) {
       await extensionsApi.toggle(extId, enabled);
       await this.fetchExtensions();
+    },
+
+    async openDetail(ext) {
+      this.detailExt = ext;
+      this.detailLoading = true;
+      try {
+        this.detailSettings = await extensionsApi.getSettings(ext.id);
+      } catch {
+        this.detailSettings = { features: {} };
+      } finally {
+        this.detailLoading = false;
+      }
+    },
+
+    closeDetail() {
+      this.detailExt = null;
+      this.detailSettings = null;
+    },
+
+    async toggleFeature(extId, featureId, value) {
+      const previous = this.detailSettings?.features?.[featureId];
+      if (this.detailSettings?.features) {
+        this.detailSettings.features[featureId] = value;
+      }
+      try {
+        await extensionsApi.saveSettings(extId, this.detailSettings);
+      } catch (e) {
+        if (this.detailSettings?.features) {
+          this.detailSettings.features[featureId] = previous;
+        }
+        throw e;
+      }
     },
   },
 });
