@@ -28,6 +28,45 @@ from app.extensions.permissions import validate_permissions
 from app.extensions.loader import unload_extension as _unload
 
 
+# ── settings.json 读写辅助 ──────────────────────
+
+def _read_extension_settings(ext_id):
+    """读取扩展 settings.json，不存在时按 manifest features.default 生成。
+
+    返回: {"features": {"feat-a": true, "feat-b": false}}
+    """
+    settings_path = os.path.join(_reg.EXTENSIONS_DIR, ext_id, "settings.json")
+    if os.path.isfile(settings_path):
+        with open(settings_path, "r", encoding="utf-8") as f:
+            try:
+                return json.load(f)
+            except json.JSONDecodeError:
+                pass  # 文件损坏，fall through 生成默认值
+
+    # 不存在或损坏 → 按 manifest default 生成
+    manifest_path = os.path.join(_reg.EXTENSIONS_DIR, ext_id, "manifest.json")
+    features_declared = []
+    if os.path.isfile(manifest_path):
+        with open(manifest_path, "r", encoding="utf-8") as f:
+            m = json.load(f)
+            features_declared = m.get("features", [])
+
+    defaults = {}
+    for feat in features_declared:
+        if isinstance(feat, dict) and "id" in feat:
+            defaults[feat["id"]] = feat.get("default", False)
+
+    return {"features": defaults}
+
+
+def _write_extension_settings(ext_id, data):
+    """写入扩展 settings.json。"""
+    settings_path = os.path.join(_reg.EXTENSIONS_DIR, ext_id, "settings.json")
+    os.makedirs(os.path.dirname(settings_path), exist_ok=True)
+    with open(settings_path, "w", encoding="utf-8") as f:
+        json.dump(data, f, ensure_ascii=False, indent=2)
+
+
 @api_bp.route("/extensions")
 def list_extensions():
     data = read_registry()
@@ -218,9 +257,7 @@ def get_extension_frontend(ext_id):
         for fname in sorted(os.listdir(comp_dir)):
             if fname.endswith(".js"):
                 with open(os.path.join(comp_dir, fname), "r", encoding="utf-8") as f:
-                    code = f.read()
-                # 将 import 替换为全局变量引用（扩展不使用 ES import）
-                scripts.append(code)
+                    scripts.append(f.read())
 
     index_path = os.path.join(frontend_dir, "index.js")
     if os.path.isfile(index_path):
