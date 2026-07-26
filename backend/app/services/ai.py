@@ -29,6 +29,8 @@ def stream_chat(api_url, api_key, model, messages, response_format, cancel_event
         )
         resp.raise_for_status()
 
+        last_usage = None
+
         for line in resp.iter_lines():
             if cancel_event.is_set():
                 yield {"stopped": True}
@@ -55,10 +57,13 @@ def stream_chat(api_url, api_key, model, messages, response_format, cancel_event
                     yield {"reasoning_delta": reasoning}
                 if content:
                     yield {"delta": content}
+                # 收集最后一条有 usage 的 chunk
+                if "usage" in chunk:
+                    last_usage = chunk["usage"]
             except (json.JSONDecodeError, KeyError, IndexError):
                 continue
 
-        yield {"done": True}
+        yield {"done": True, "usage": last_usage}
 
     except requests.RequestException as e:
         yield {"error": str(e)}

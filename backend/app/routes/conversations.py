@@ -30,6 +30,7 @@ def _stream_and_save(settings, messages, conv_id, cancel_event,
 
     full_content = ""
     full_reasoning = ""
+    final_usage = None
     assistant_msg_id = str(uuid.uuid4())
     assistant_created = datetime.now(timezone.utc).isoformat()
 
@@ -58,6 +59,7 @@ def _stream_and_save(settings, messages, conv_id, cancel_event,
                 full_content += chunk["delta"]
                 yield f"data: {json.dumps({'delta': chunk['delta'], 'done': False})}\n\n"
             if chunk.get("done"):
+                final_usage = chunk.get("usage")
                 yield f"data: {json.dumps({'done': True})}\n\n"
     finally:
         if full_content or full_reasoning:
@@ -78,7 +80,7 @@ def _stream_and_save(settings, messages, conv_id, cancel_event,
                 "conversation_id": conv_id,
                 "messages": messages + [{"role": "assistant", "content": full_content}],
                 "request_body": {"model": settings.get("model"), "messages": messages},
-                "response_body": {"content": full_content, "reasoning_content": full_reasoning},
+                "response_body": {"content": full_content, "reasoning_content": full_reasoning, "usage": final_usage},
                 "world_info_entries": world_info_entries,
                 "settings": settings,
             }

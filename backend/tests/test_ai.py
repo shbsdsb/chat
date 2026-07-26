@@ -39,7 +39,7 @@ class TestStreamChat:
 
         assert {"delta": "你好"} in results
         assert {"delta": "世界"} in results
-        assert {"done": True} in results
+        assert {"done": True, "usage": None} in results
 
     def test_yields_done_at_end(self):
         cancel = threading.Event()
@@ -55,7 +55,7 @@ class TestStreamChat:
                 cancel,
             ))
 
-        assert results[-1] == {"done": True}
+        assert results[-1] == {"done": True, "usage": None}
 
     def test_stops_on_cancel(self):
         cancel = threading.Event()
@@ -160,7 +160,7 @@ class TestStreamChatReasoning:
         assert {"reasoning_delta": "让我想想"} in results
         assert {"reasoning_delta": "用户的问题是"} in results
         assert {"delta": "你好！"} in results
-        assert {"done": True} in results
+        assert {"done": True, "usage": None} in results
 
     def test_no_reasoning_for_plain_models(self):
         """没有 reasoning_content 的模型不产生 reasoning_delta"""
