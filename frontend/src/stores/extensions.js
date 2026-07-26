@@ -10,6 +10,7 @@ export const useExtensionsStore = defineStore('extensions', {
     detailExt: null,        // 当前查看详情的扩展对象
     detailSettings: null,   // { features: {...} }
     detailLoading: false,
+    settingsVersion: 0,     // 递增以通知 ExtensionSlot 重新加载 settings
   }),
 
   getters: {
@@ -89,6 +90,7 @@ export const useExtensionsStore = defineStore('extensions', {
       }
       try {
         await extensionsApi.saveSettings(extId, this.detailSettings);
+        this.settingsVersion++;
       } catch (e) {
         if (this.detailSettings?.features) {
           this.detailSettings.features[featureId] = previous;

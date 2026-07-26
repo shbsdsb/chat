@@ -99,6 +99,13 @@ onMounted(() => {
 watch(() => extensionsStore.items, () => {
   loadAllAndRender();
 }, { deep: true });
+
+// 监听功能开关变更（toggleFeature 完成后触发）→ 重新加载 settings 并更新组件 props
+watch(() => extensionsStore.settingsVersion, async () => {
+  if (!extensionsStore.settingsVersion) return; // 跳过初始值 0
+  await loadSettings();
+  loadComponents();
+});
 </script>
 
 <style scoped>
