@@ -867,3 +867,151 @@ class TestPutSettings:
         data = resp.get_json()
         assert data["data"]["features"]["feat-a"] is False
         assert data["data"]["features"]["feat-b"] is True
+
+
+# ============================================================
+# group (type:group) 测试
+# ============================================================
+
+class TestGroupFeatures:
+    def test_get_settings_with_group_defaults(self, api_client, tmp_path, monkeypatch):
+        """manifest 有 group 时 GET 返回模块 + 子功能点号键"""
+        ext_dir = tmp_path / "extensions"
+        monkeypatch.setattr("app.extensions.installer.EXTENSIONS_DIR", str(ext_dir))
+        monkeypatch.setattr("app.extensions.loader.EXTENSIONS_DIR", str(ext_dir))
+        monkeypatch.setattr("app.extensions.registry.EXTENSIONS_DIR", str(ext_dir))
+
+        ext_path = ext_dir / "group-ext"
+        ext_path.mkdir(parents=True)
+        manifest_data = {
+            "id": "group-ext", "name": "Group Ext", "version": "1.0.0",
+            "permissions": [], "ext_points": {"backend": [], "frontend": []},
+            "min_app_version": "1.2.0",
+            "features": [
+                {"id": "simple-feat", "label": "Simple", "description": "", "default": True},
+                {"id": "my-group", "label": "My Group", "type": "group", "default": True,
+                 "children": [
+                     {"id": "child-a", "label": "A", "description": "", "default": True},
+                     {"id": "child-b", "label": "B", "description": "", "default": False},
+                 ]},
+            ]
+        }
+        (ext_path / "manifest.json").write_text(json.dumps(manifest_data), encoding="utf-8")
+
+        from app.extensions.registry import add_extension, write_registry
+        write_registry({"extensions": {}})
+        add_extension("group-ext", {
+            "version": "1.0.0", "enabled": True,
+            "installed_at": "2026-01-01T00:00:00Z",
+            "install_method": "zip",
+            "permissions_granted": []
+        })
+
+        resp = api_client.get("/api/extensions/group-ext/settings")
+        data = resp.get_json()
+        assert data["code"] == 0
+        f = data["data"]["features"]
+        assert f["simple-feat"] is True
+        assert f["my-group"] is True
+        assert f["my-group.child-a"] is True
+        assert f["my-group.child-b"] is False
+
+    def test_put_group_child_key_accepted(self, api_client, tmp_path, monkeypatch):
+        """PUT 点号键应被接受"""
+        ext_dir = tmp_path / "extensions"
+        monkeypatch.setattr("app.extensions.installer.EXTENSIONS_DIR", str(ext_dir))
+        monkeypatch.setattr("app.extensions.loader.EXTENSIONS_DIR", str(ext_dir))
+        monkeypatch.setattr("app.extensions.registry.EXTENSIONS_DIR", str(ext_dir))
+
+        ext_path = ext_dir / "group-put"
+        ext_path.mkdir(parents=True)
+        manifest_data = {
+            "id": "group-put", "name": "Group Put", "version": "1.0.0",
+            "permissions": [], "ext_points": {"backend": [], "frontend": []},
+            "min_app_version": "1.2.0",
+            "features": [
+                {"id": "my-group", "label": "G", "type": "group", "default": True,
+                 "children": [{"id": "child-a", "label": "A", "description": "", "default": True}]},
+            ]
+        }
+        (ext_path / "manifest.json").write_text(json.dumps(manifest_data), encoding="utf-8")
+
+        from app.extensions.registry import add_extension, write_registry
+        write_registry({"extensions": {}})
+        add_extension("group-put", {
+            "version": "1.0.0", "enabled": True,
+            "installed_at": "2026-01-01T00:00:00Z",
+            "install_method": "zip",
+            "permissions_granted": []
+        })
+
+        resp = api_client.put("/api/extensions/group-put/settings",
+                              json={"features": {"my-group": True, "my-group.child-a": False}})
+        data = resp.get_json()
+        assert data["code"] == 0
+
+    def test_put_unknown_child_key_rejected(self, api_client, tmp_path, monkeypatch):
+        """未声明的点号键应被拒绝"""
+        ext_dir = tmp_path / "extensions"
+        monkeypatch.setattr("app.extensions.installer.EXTENSIONS_DIR", str(ext_dir))
+        monkeypatch.setattr("app.extensions.loader.EXTENSIONS_DIR", str(ext_dir))
+        monkeypatch.setattr("app.extensions.registry.EXTENSIONS_DIR", str(ext_dir))
+
+        ext_path = ext_dir / "group-reject"
+        ext_path.mkdir(parents=True)
+        manifest_data = {
+            "id": "group-reject", "name": "Group Reject", "version": "1.0.0",
+            "permissions": [], "ext_points": {"backend": [], "frontend": []},
+            "min_app_version": "1.2.0",
+            "features": [
+                {"id": "my-group", "label": "G", "type": "group", "default": True,
+                 "children": [{"id": "child-a", "label": "A", "description": "", "default": True}]},
+            ]
+        }
+        (ext_path / "manifest.json").write_text(json.dumps(manifest_data), encoding="utf-8")
+
+        from app.extensions.registry import add_extension, write_registry
+        write_registry({"extensions": {}})
+        add_extension("group-reject", {
+            "version": "1.0.0", "enabled": True,
+            "installed_at": "2026-01-01T00:00:00Z",
+            "install_method": "zip",
+            "permissions_granted": []
+        })
+
+        resp = api_client.put("/api/extensions/group-reject/settings",
+                              json={"features": {"my-group.unknown-child": True}})
+        data = resp.get_json()
+        assert data["code"] == 400
+
+    def test_confirm_initializes_group_settings(self, api_client, tmp_path, monkeypatch):
+        """confirm 时应生成子功能默认值点号键"""
+        ext_dir = tmp_path / "extensions"
+        monkeypatch.setattr("app.extensions.installer.EXTENSIONS_DIR", str(ext_dir))
+        monkeypatch.setattr("app.extensions.loader.EXTENSIONS_DIR", str(ext_dir))
+        monkeypatch.setattr("app.extensions.registry.EXTENSIONS_DIR", str(ext_dir))
+
+        ext_path = ext_dir / "group-confirm"
+        ext_path.mkdir(parents=True)
+        manifest = {
+            "id": "group-confirm", "name": "GC", "version": "1.0.0",
+            "permissions": [], "ext_points": {"backend": [], "frontend": []},
+            "min_app_version": "1.2.0",
+            "features": [
+                {"id": "my-group", "label": "G", "type": "group", "default": True,
+                 "children": [{"id": "ca", "label": "CA", "description": "", "default": True}]},
+            ]
+        }
+        (ext_path / "manifest.json").write_text(json.dumps(manifest), encoding="utf-8")
+
+        from app.extensions.registry import write_registry
+        write_registry({"extensions": {}})
+
+        resp = api_client.post("/api/extensions/group-confirm/confirm",
+                               json={"permissions": []})
+        assert resp.get_json()["code"] == 0
+
+        settings_path = ext_path / "settings.json"
+        saved = json.loads(settings_path.read_text(encoding="utf-8"))
+        assert saved["features"]["my-group"] is True
+        assert saved["features"]["my-group.ca"] is True

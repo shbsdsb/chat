@@ -170,7 +170,14 @@ def confirm_extension(ext_id):
     if features_declared:
         defaults = {}
         for feat in features_declared:
-            if isinstance(feat, dict) and "id" in feat:
+            if not isinstance(feat, dict) or "id" not in feat:
+                continue
+            if feat.get("type") == "group":
+                defaults[feat["id"]] = feat.get("default", False)
+                for child in feat.get("children", []):
+                    if isinstance(child, dict) and "id" in child:
+                        defaults[f"{feat['id']}.{child['id']}"] = child.get("default", False)
+            else:
                 defaults[feat["id"]] = feat.get("default", False)
         _write_extension_settings(ext_id, {"features": defaults})
 
@@ -328,7 +335,14 @@ def put_extension_settings(ext_id):
         with open(manifest_path, "r", encoding="utf-8") as f:
             m = json.load(f)
             for feat in m.get("features", []):
-                if isinstance(feat, dict) and "id" in feat:
+                if not isinstance(feat, dict) or "id" not in feat:
+                    continue
+                if feat.get("type") == "group":
+                    known_ids.add(feat["id"])
+                    for child in feat.get("children", []):
+                        if isinstance(child, dict) and "id" in child:
+                            known_ids.add(f"{feat['id']}.{child['id']}")
+                else:
                     known_ids.add(feat["id"])
 
     # 校验：未知 feature id
