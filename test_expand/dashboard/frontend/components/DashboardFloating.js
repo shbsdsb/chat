@@ -1,4 +1,5 @@
-const { h, ref, computed, onMounted, onBeforeUnmount } = window.__VUE__;
+(function() {
+  const { h, ref, computed, watch, onMounted, onBeforeUnmount } = window.__EXT_VUE__;
 
 const MAX_TOKENS = 100_000_000;
 
@@ -11,8 +12,15 @@ function formatTokens(n) {
 
 window.__DASHBOARD_FLOATING__ = {
   name: 'DashboardFloating',
-  props: { api: Object },
+  props: { api: Object, settings: Object },
   setup(props) {
+    // 从 window.__EXT_VUE__ 实时读取（非 IIFE 闭包），兼容 HMR / contextIsolation
+    const V = window.__EXT_VUE__;
+    if (!V || typeof V.ref !== 'function') {
+      console.error('[Dashboard] window.__EXT_VUE__ 异常:', V);
+      return () => null;
+    }
+    const { ref, computed, watch, onMounted, onBeforeUnmount } = V;
     const expanded = ref(false);
     const metrics = ref(null);
     const pos = ref({ x: -1, y: -1 });
@@ -28,8 +36,8 @@ window.__DASHBOARD_FLOATING__ = {
     } catch (e) { /* ignore */ }
 
     // 默认位置：右下角
-    const x = computed(() => pos.value.x >= 0 ? pos.value.x : window.innerWidth - 60);
-    const y = computed(() => pos.value.y >= 0 ? pos.value.y : window.innerHeight - 160);
+    const x = computed(() => pos.value.x !== -1 ? pos.value.x : window.innerWidth - 60);
+    const y = computed(() => pos.value.y !== -1 ? pos.value.y : window.innerHeight - 160);
 
     const pct = computed(() => {
       const t = metrics.value?.total_prompt_tokens || 0;
@@ -85,8 +93,21 @@ window.__DASHBOARD_FLOATING__ = {
       if (wasDragged.value) return;
       e.stopPropagation();
       expanded.value = !expanded.value;
-      if (expanded.value) fetchMetrics();
     }
+
+    // 展开/收起时统一管理定时器（受 auto-refresh 控制）
+    watch(expanded, (val) => {
+      if (val) {
+        fetchMetrics();
+        const autoRefresh = props.settings?.features?.['auto-refresh'] !== false;
+        if (autoRefresh) {
+          pollTimer = setInterval(fetchMetrics, 3000);
+        }
+      } else {
+        clearInterval(pollTimer);
+        pollTimer = null;
+      }
+    });
 
     function onBackdropClick() {
       expanded.value = false;
@@ -95,8 +116,6 @@ window.__DASHBOARD_FLOATING__ = {
     onMounted(() => {
       document.addEventListener('pointermove', onPointerMove);
       document.addEventListener('pointerup', onPointerUp);
-      fetchMetrics();
-      pollTimer = setInterval(fetchMetrics, 3000);
     });
 
     onBeforeUnmount(() => {
@@ -118,7 +137,6 @@ window.__DASHBOARD_FLOATING__ = {
 
     const panelStyle = {
       position: 'fixed', left: '0px', top: '0px',
-      transform: 'translate(-100%, -100%)',
       width: '180px', height: '400px', borderRadius: '12px',
       background: 'rgba(255,255,255,0.95)', backdropFilter: 'blur(12px)',
       boxShadow: '0 4px 24px rgba(0,0,0,0.18)',
@@ -132,6 +150,7 @@ window.__DASHBOARD_FLOATING__ = {
     const divider = { borderTop: '1px solid #eee', margin: '2px 0' };
 
     return () => {
+      const feat = props.settings?.features || {};
       const btnLeft = x.value + 'px';
       const btnTop = y.value + 'px';
 
@@ -144,15 +163,20 @@ window.__DASHBOARD_FLOATING__ = {
       if (!expanded.value) return btn;
 
       // 面板位于圆纽左上方
-      const px = (x.value) + 'px';
-      const py = (y.value) + 'px';
+      const px = x.value + 'px';
+      const py = y.value + 'px';
       const m = metrics.value || {};
 
+      // 面板位于按钮左上方，clamp 防止超出屏幕
+      const panelLeft = Math.max(10, x.value - 200);
+      const panelTop  = Math.max(10, y.value - 420);
+
       const panel = h('div', { style: { ...panelStyle, right: 'auto', bottom: 'auto',
-                                        left: (x.value - 200) + 'px',
-                                        top: (y.value - 420) + 'px',
+                                        left: panelLeft + 'px',
+                                        top: panelTop + 'px',
                                         transform: 'none' } }, [
-        // 上下文窗口
+        // 上下文窗口（受 show-context-usage 控制）
+        ...(feat['show-context-usage'] !== false ? [
         h('div', { style: sectionTitle }, '📊 上下文窗口'),
         h('div', { style: row }, [
           h('span', null, `${formatTokens(m.total_prompt_tokens)} / 100M`),
@@ -162,10 +186,14 @@ window.__DASHBOARD_FLOATING__ = {
           h('div', { style: { width:pct.value+'%', height:'100%', borderRadius:'3px',
                               background:barColor.value, transition:'width 0.3s' } }),
         ]),
+        ] : []),
 
+        ...(feat['show-context-usage'] !== false && feat['show-token-count'] !== false ? [
         h('div', { style: divider }),
+        ] : []),
 
-        // 会话指标
+        // 会话指标（受 show-token-count 控制）
+        ...(feat['show-token-count'] !== false ? [
         h('div', { style: sectionTitle }, '📈 会话指标'),
         h('div', { style: row }, [
           h('span', null, '命中率'),
@@ -180,6 +208,7 @@ window.__DASHBOARD_FLOATING__ = {
           h('span', null, '累计 AI token'),
           h('span', { style: { fontWeight: 600 } }, formatTokens(m.total_completion_tokens)),
         ]),
+        ] : []),
       ]);
 
       // backdrop 点击收起
@@ -192,3 +221,4 @@ window.__DASHBOARD_FLOATING__ = {
     };
   },
 };
+})();
