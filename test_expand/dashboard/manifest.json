@@ -12,12 +12,6 @@
   "min_app_version": "1.2.0",
   "features": [
     {
-      "id": "show-token-count",
-      "label": "显示 Token 计数",
-      "description": "在面板中显示每次对话的 Token 消耗量",
-      "default": true
-    },
-    {
       "id": "show-context-usage",
       "label": "显示上下文用量",
       "description": "显示当前会话的上下文窗口使用百分比",
@@ -28,6 +22,17 @@
       "label": "自动刷新指标",
       "description": "每 30 秒自动刷新面板中的统计数据",
       "default": false
+    },
+    {
+      "id": "session-metrics",
+      "label": "会话指标",
+      "type": "group",
+      "default": true,
+      "children": [
+        { "id": "hit-rate", "label": "命中率", "description": "显示 AI 回复的缓存命中率", "default": true },
+        { "id": "request-count", "label": "请求次数", "description": "显示当前会话的 API 请求次数", "default": true },
+        { "id": "completion-tokens", "label": "累计 AI Token", "description": "显示累计 AI 输出的 Token 总量", "default": true }
+      ]
     }
   ]
 }

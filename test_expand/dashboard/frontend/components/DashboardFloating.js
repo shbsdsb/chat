@@ -188,26 +188,34 @@ window.__DASHBOARD_FLOATING__ = {
         ]),
         ] : []),
 
-        ...(feat['show-context-usage'] !== false && feat['show-token-count'] !== false ? [
+        ...(feat['show-context-usage'] !== false && feat['session-metrics'] !== false ? [
         h('div', { style: divider }),
         ] : []),
 
-        // 会话指标（受 show-token-count 控制）
-        ...(feat['show-token-count'] !== false ? [
+        // 会话指标（受 session-metrics group 控制）
+        ...(feat['session-metrics'] !== false ? [
+        ...(feat['session-metrics.hit-rate'] !== false || feat['session-metrics.request-count'] !== false || feat['session-metrics.completion-tokens'] !== false ? [
         h('div', { style: sectionTitle }, '📈 会话指标'),
+        ] : []),
+        ...(feat['session-metrics.hit-rate'] !== false ? [
         h('div', { style: row }, [
           h('span', null, '命中率'),
           h('span', { style: { color: hitColor.value, fontWeight: 600 } },
             `${Math.round((m.last_hit_rate || 0) * 100)}%`),
         ]),
+        ] : []),
+        ...(feat['session-metrics.request-count'] !== false ? [
         h('div', { style: row }, [
           h('span', null, '请求次数'),
           h('span', { style: { fontWeight: 600 } }, String(m.request_count || 0)),
         ]),
+        ] : []),
+        ...(feat['session-metrics.completion-tokens'] !== false ? [
         h('div', { style: row }, [
           h('span', null, '累计 AI token'),
           h('span', { style: { fontWeight: 600 } }, formatTokens(m.total_completion_tokens)),
         ]),
+        ] : []),
         ] : []),
       ]);
 

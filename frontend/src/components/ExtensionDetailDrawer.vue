@@ -70,24 +70,65 @@
         <!-- 功能开关 -->
         <section class="detail-section" v-if="features.length">
           <h4 class="detail-section-title">功能开关</h4>
-          <div
-            v-for="feat in features"
-            :key="feat.id"
-            class="feature-item"
-          >
-            <div class="feature-info">
-              <span class="feature-label">{{ feat.label }}</span>
-              <span class="feature-desc" v-if="feat.description">{{ feat.description }}</span>
+          <template v-for="feat in features" :key="feat.id">
+            <!-- 模块（type: group） -->
+            <div v-if="feat.type === 'group'" class="feature-group">
+              <div
+                class="feature-group-header"
+                @click="onGroupToggle(feat)"
+              >
+                <span class="group-arrow" :class="{ expanded: groupExpanded[feat.id] }">▶</span>
+                <div class="feature-info">
+                  <span class="feature-label">{{ feat.label }}</span>
+                </div>
+                <label class="feature-toggle" @click.stop>
+                  <input
+                    type="checkbox"
+                    :checked="!!settings.features[feat.id]"
+                    @change="onGroupSwitch(feat, $event.target.checked)"
+                  />
+                  <span class="toggle-slider" />
+                </label>
+              </div>
+              <div v-if="groupExpanded[feat.id] && settings.features[feat.id]" class="feature-group-children">
+                <div
+                  v-for="child in feat.children"
+                  :key="child.id"
+                  class="feature-item feature-child"
+                >
+                  <div class="feature-info">
+                    <span class="feature-label">{{ child.label }}</span>
+                    <span class="feature-desc" v-if="child.description">{{ child.description }}</span>
+                  </div>
+                  <label class="feature-toggle">
+                    <input
+                      type="checkbox"
+                      :checked="!!settings.features[feat.id + '.' + child.id]"
+                      :disabled="!settings.features[feat.id]"
+                      @change="onFeatureChange(feat.id + '.' + child.id, $event.target.checked)"
+                    />
+                    <span class="toggle-slider" />
+                  </label>
+                </div>
+              </div>
             </div>
-            <label class="feature-toggle">
-              <input
-                type="checkbox"
-                :checked="!!settings.features[feat.id]"
-                @change="onFeatureChange(feat.id, $event.target.checked)"
-              />
-              <span class="toggle-slider" />
-            </label>
-          </div>
+
+            <!-- 叶子功能 -->
+            <div v-else class="feature-item">
+              <div class="feature-info">
+                <span class="feature-label">{{ feat.label }}</span>
+                <span class="feature-desc" v-if="feat.description">{{ feat.description }}</span>
+              </div>
+              <label class="feature-toggle">
+                <input
+                  type="checkbox"
+                  :checked="!!settings.features[feat.id]"
+                  @change="onFeatureChange(feat.id, $event.target.checked)"
+                />
+                <span class="toggle-slider" />
+              </label>
+            </div>
+          </template>
         </section>
       </template>
     </div>
@@ -129,6 +170,21 @@ watch(() => store.detailExt, async (ext) => {
 }, { immediate: true });
 
 const features = computed(() => manifest.value?.features || []);
+const groupExpanded = ref({});
+
+function onGroupToggle(feat) {
+  if (!settings.value.features[feat.id]) return;
+  groupExpanded.value[feat.id] = !groupExpanded.value[feat.id];
+}
+
+async function onGroupSwitch(feat, value) {
+  await store.toggleFeature(store.detailExt.id, feat.id, value);
+  if (value) {
+    groupExpanded.value[feat.id] = true;
+  } else {
+    groupExpanded.value[feat.id] = false;
+  }
+}
 const settings = computed(() => store.detailSettings || { features: {} });
 const hasExtPoints = computed(() => {
   return (manifest.value?.ext_points?.backend?.length ||
@@ -374,5 +430,50 @@ function formatDate(isoStr) {
   color: #999;
   padding: 32px 0;
   font-size: 14px;
+}
+
+/* 模块 (group) */
+.feature-group {
+  margin-bottom: 8px;
+  border: 1px solid #e8e8e8;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.feature-group-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  cursor: pointer;
+  user-select: none;
+  transition: background 0.15s;
+}
+.feature-group-header:hover {
+  background: #fafafa;
+}
+
+.group-arrow {
+  font-size: 10px;
+  color: #999;
+  transition: transform 0.2s;
+  flex-shrink: 0;
+}
+.group-arrow.expanded {
+  transform: rotate(90deg);
+}
+
+.feature-group-children {
+  border-top: 1px solid #f0f0f0;
+  background: #fafafa;
+}
+
+.feature-child {
+  padding-left: 28px;
+  border-bottom: 1px solid #f0f0f0;
+  margin-bottom: 0;
+}
+.feature-child:last-child {
+  border-bottom: none;
 }
 </style>

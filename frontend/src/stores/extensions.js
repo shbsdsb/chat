@@ -84,16 +84,37 @@ export const useExtensionsStore = defineStore('extensions', {
     },
 
     async toggleFeature(extId, featureId, value) {
-      const previous = this.detailSettings?.features?.[featureId];
+      const prevFeatures = { ...this.detailSettings?.features || {} };
+
       if (this.detailSettings?.features) {
         this.detailSettings.features[featureId] = value;
       }
+
+      // 检查是否为 group 开关 → 级联子功能
+      try {
+        const manifest = await extensionsApi.getManifest(extId);
+        const allFeatures = manifest?.features || [];
+        const group = allFeatures.find(
+          f => f.id === featureId && f.type === 'group'
+        );
+        if (group && this.detailSettings?.features) {
+          for (const child of group.children || []) {
+            const ck = `${featureId}.${child.id}`;
+            if (!value) {
+              this.detailSettings.features[ck] = false;
+            }
+          }
+        }
+      } catch {
+        // manifest 获取失败时仅操作 featureId 本身
+      }
+
       try {
         await extensionsApi.saveSettings(extId, this.detailSettings);
         this.settingsVersion++;
       } catch (e) {
         if (this.detailSettings?.features) {
-          this.detailSettings.features[featureId] = previous;
+          this.detailSettings.features = prevFeatures;
         }
         throw e;
       }
