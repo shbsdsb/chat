@@ -103,7 +103,12 @@ import { useAlertStore } from '@/stores/alert';
 
 const store = useExtensionsStore();
 const alert = useAlertStore();
-const { drawerWidth, resizing, onResizeStart } = useResizableDrawer('detail', { defaultWidth: 360 });
+const { width: drawerWidth, isResizing: resizing, startResize: onResizeStart } = useResizableDrawer({
+  direction: 'right',
+  minWidth: 280,
+  maxWidth: 600,
+  defaultWidth: 360
+});
 const detailLoading = ref(false);
 const manifest = ref(null);
 
