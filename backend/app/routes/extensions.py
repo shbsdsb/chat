@@ -158,6 +158,15 @@ def confirm_extension(ext_id):
         "permissions_granted": valid,
     })
 
+    # 初始化 settings.json（按 manifest features.default）
+    features_declared = manifest.get("features", [])
+    if features_declared:
+        defaults = {}
+        for feat in features_declared:
+            if isinstance(feat, dict) and "id" in feat:
+                defaults[feat["id"]] = feat.get("default", False)
+        _write_extension_settings(ext_id, {"features": defaults})
+
     mgr = get_extension_manager()
     result = mgr.reload_extension(ext_id)  # api_bp=None: 运行时安装不注册 API 路由（需重启生效）
 

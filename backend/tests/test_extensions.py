@@ -440,6 +440,41 @@ class TestConfirmExtension:
         assert data["data"]["status"] == "loaded"
         assert "chat.post_receive" in data["data"]["registered_hooks"]
 
+    def test_confirm_initializes_settings(self, api_client, tmp_path, monkeypatch):
+        """确认安装后应自动按 manifest features.default 创建 settings.json"""
+        ext_dir = tmp_path / "extensions"
+        monkeypatch.setattr("app.extensions.installer.EXTENSIONS_DIR", str(ext_dir))
+        monkeypatch.setattr("app.extensions.loader.EXTENSIONS_DIR", str(ext_dir))
+        monkeypatch.setattr("app.extensions.registry.EXTENSIONS_DIR", str(ext_dir))
+
+        ext_path = ext_dir / "feat-confirm"
+        ext_path.mkdir(parents=True)
+        manifest = {
+            "id": "feat-confirm", "name": "Feat Confirm", "version": "1.0.0",
+            "permissions": [], "ext_points": {"backend": [], "frontend": []},
+            "min_app_version": "1.0.0",
+            "features": [
+                {"id": "feat-x", "label": "X", "description": "", "default": True},
+                {"id": "feat-y", "label": "Y", "description": "", "default": False},
+            ]
+        }
+        (ext_path / "manifest.json").write_text(json.dumps(manifest), encoding="utf-8")
+
+        from app.extensions.registry import write_registry
+        write_registry({"extensions": {}})
+
+        resp = api_client.post("/api/extensions/feat-confirm/confirm",
+                               json={"permissions": []})
+        data = resp.get_json()
+        assert data["code"] == 0
+
+        # 验证 settings.json 已生成
+        settings_path = ext_path / "settings.json"
+        assert settings_path.is_file()
+        saved = json.loads(settings_path.read_text(encoding="utf-8"))
+        assert saved["features"]["feat-x"] is True
+        assert saved["features"]["feat-y"] is False
+
 
 class TestUninstallExtension:
     def test_uninstall_not_found(self, api_client):
