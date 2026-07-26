@@ -53,7 +53,14 @@ def _read_extension_settings(ext_id):
 
     defaults = {}
     for feat in features_declared:
-        if isinstance(feat, dict) and "id" in feat:
+        if not isinstance(feat, dict) or "id" not in feat:
+            continue
+        if feat.get("type") == "group":
+            defaults[feat["id"]] = feat.get("default", False)
+            for child in feat.get("children", []):
+                if isinstance(child, dict) and "id" in child:
+                    defaults[f"{feat['id']}.{child['id']}"] = child.get("default", False)
+        else:
             defaults[feat["id"]] = feat.get("default", False)
 
     return {"features": defaults}
