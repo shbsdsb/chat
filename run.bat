@@ -102,7 +102,7 @@ if errorlevel 1 (
 )
 
 if defined FW_MISSING (
-    echo   [>>] Requesting admin rights to open ports... (accept UAC prompt)
+    echo   [^>^>] Requesting admin rights to open ports... (accept UAC prompt)
     powershell -Command "Start-Process netsh -ArgumentList 'advfirewall firewall add rule name=\"Chat Flask 5000\" dir=in action=allow protocol=TCP localport=5000; advfirewall firewall add rule name=\"Chat Vite 5173\" dir=in action=allow protocol=TCP localport=5173' -Verb RunAs" >nul 2>&1
     echo   [OK] Admin request sent. Ports will open after you accept UAC.
 )
