@@ -306,6 +306,7 @@ manifest.json 是扩展的声明文件，应用通过它了解扩展的身份、
 | `description` | string | 简要描述，在扩展管理面板中展示 |
 | `author` | string | 作者名 |
 | `homepage` | string | 项目主页 URL |
+| `features` | array | 声明可配置的功能开关，见下方 features 规范 |
 
 #### 扩展点 (ext_points)
 
@@ -339,6 +340,157 @@ manifest.json 是扩展的声明文件，应用通过它了解扩展的身份、
 
 > 权限必须与 `.registry.json` 中的 `permissions_granted` 一致，否则安装时校验不通过。
 
+#### features 规范 — 可配置功能开关
+
+`features` 允许扩展作者声明可由用户按需开关的功能项。每个功能项是一个对象：
+
+| 字段 | 类型 | 必填 | 说明 |
+|------|------|------|------|
+| `id` | string | ✅ | 功能唯一标识（字母数字下划线连字符），在扩展内唯一 |
+| `label` | string | ✅ | 在扩展详情抽屉中展示的功能名称 |
+| `description` | string | ❌ | 辅助说明文本，展示在 label 下方 |
+| `default` | boolean | ✅ | 首次安装时的初始状态 |
+
+**示例：**
+
+```json
+{
+  "features": [
+    {
+      "id": "show-token-count",
+      "label": "显示 Token 计数",
+      "description": "在面板中显示每次对话的 Token 消耗量",
+      "default": true
+    },
+    {
+      "id": "auto-refresh",
+      "label": "自动刷新指标",
+      "description": "每 30 秒自动刷新面板中的统计数据",
+      "default": false
+    }
+  ]
+}
+```
+
+**用户视角：**
+
+- 安装扩展后，在扩展管理页面点击「详情」打开右侧抽屉
+- 如果扩展声明了 `features`，抽屉底部会出现「功能开关」区域
+- 每个 feature 渲染为一个 toggle 开关，含 label 和 description
+- 切换开关即时保存，状态持久化到扩展目录下的 `settings.json`
+- 开关值通过 `props.settings` 传入扩展前端组件
+
+**持久化文件 `settings.json`：**
+
+用户修改开关后，应用在扩展目录下自动创建/更新 `settings.json`：
+
+```json
+{
+  "features": {
+    "show-token-count": true,
+    "auto-refresh": false
+  }
+}
+```
+
+**扩展运行时读取：**
+
+前端扩展组件通过 `props.settings` 接收当前开关状态：
+
+```javascript
+// frontend/index.js
+(function() {
+  const { h, ref, computed } = window.__EXT_VUE__;
+
+  const MyPanel = {
+    props: ['api', 'settings'],
+    setup(props) {
+      const showToken = computed(() => props.settings.features?.['show-token-count']);
+      return () => showToken.value ? h('div', 'Token: 1,234') : null;
+    }
+  };
+
+  window.__EXTENSION_REGISTRY__ = window.__EXTENSION_REGISTRY__ || {};
+  window.__EXTENSION_REGISTRY__['my-extension'] = {
+    panel: [MyPanel]
+  };
+})();
+```
+
+**后端扩展读取：**
+
+后端 `backend.py` 中可通过读取 `settings.json` 获取开关状态：
+
+```python
+import json, os
+
+def _get_settings():
+    path = os.path.join(os.path.dirname(__file__), 'settings.json')
+    if os.path.isfile(path):
+        with open(path, 'r', encoding='utf-8') as f:
+            return json.load(f)
+    return {'features': {}}
+
+def on_chat_post_receive(ctx):
+    settings = _get_settings()
+    if settings.get('features', {}).get('auto-refresh'):
+        # 执行自动刷新逻辑
+        pass
+    return None
+```
+
+**约束：**
+
+- `features` 为可选字段，省略时详情抽屉不显示功能开关区域
+- `id` 在扩展内必须唯一
+- 用户修改的 feature id 必须在 manifest 的 `features` 中声明过（后端校验）
+- 值必须是 boolean 类型
+- `settings.json` 不存在时，系统按 manifest 的 `default` 自动生成
+
+#### 模块（group）嵌套
+
+`features` 支持 `type: "group"` 声明模块，将相关功能归类到一个可折叠的父级开关下：
+
+| 字段 | 类型 | 说明 |
+|------|------|------|
+| `type` | string | `"group"` 表示模块，省略表示叶子功能 |
+| `children` | array | 子功能数组，结构与叶子功能相同 |
+
+**group 示例：**
+
+```json
+{
+  "features": [
+    { "id": "simple-toggle", "label": "简单开关", "default": true },
+    {
+      "id": "session-metrics",
+      "label": "会话指标",
+      "type": "group",
+      "default": true,
+      "children": [
+        { "id": "hit-rate", "label": "命中率", "description": "显示缓存命中率", "default": true },
+        { "id": "request-count", "label": "请求次数", "description": "显示请求次数", "default": true }
+      ]
+    }
+  ]
+}
+```
+
+**约束：**
+- 仅支持一级嵌套（`children` 内不再含 `type: "group"`）
+- 模块 `id` 与子功能 `id` 在 settings 中以点号连接：`session-metrics.hit-rate`
+- 模块开关关闭时子功能全部关闭但**保留键**（记忆关闭前的状态）
+- 模块开关重新开启时不覆盖已有子功能状态
+- 用户手动关闭所有子功能时，模块开关**不会**自动关闭
+
+**前端读取子功能设置：**
+
+```javascript
+const feat = props.settings?.features || {};
+const showHitRate = feat['session-metrics.hit-rate'] !== false;
+const showRequestCount = feat['session-metrics.request-count'] !== false;
+```
+
 #### 完整示例
 
 以 Dashboard 扩展为例，展示一个使用多个扩展点的 manifest：
@@ -354,7 +506,21 @@ manifest.json 是扩展的声明文件，应用通过它了解扩展的身份、
     "backend": ["chat.post_receive", "api_route"],
     "frontend": ["panel"]
   },
-  "min_app_version": "1.2.0"
+  "min_app_version": "1.2.0",
+  "features": [
+    {
+      "id": "show-token-count",
+      "label": "显示 Token 计数",
+      "description": "在面板中显示每次对话的 Token 消耗量",
+      "default": true
+    },
+    {
+      "id": "auto-refresh",
+      "label": "自动刷新指标",
+      "description": "每 30 秒自动刷新面板中的统计数据",
+      "default": false
+    }
+  ]
 }
 ```
 
@@ -1064,6 +1230,10 @@ getMessages() {
 | 权限不在 `VALID_PERMISSIONS` 中 | 安装时校验不通过 | 只使用 `permissions.py` 中定义的 6 种权限 |
 | `ext_points` 中声明了未实现的扩展点 | 加载时报错 | 声明 `api_route` 就必须实现 `register_api_routes()` |
 | `permissions_granted` 不匹配 | 安装失败 | `.registry.json` 中的 `permissions_granted` 必须覆盖 manifest 中声明的所有权限 |
+| `features[].id` 包含特殊字符 | PUT settings 时报 400 | 只使用字母数字下划线连字符 |
+| `features[].default` 为非 boolean | PUT settings 时报 400 | `default` 必须是 `true` 或 `false` |
+| group 的 `children` 内使用 `type: "group"` | 加载时忽略嵌套 group | 仅一级嵌套，子功能为叶子 |
+| settings 中 `模块id.子功能id` 键不存在 | 按 default 生成 | 确保 manifest 声明了对应的 children |
 
 ### 3.6 常见错误排查清单
 
@@ -1071,6 +1241,7 @@ getMessages() {
 
 - [ ] `manifest.json` 中 `id` 与目录名一致
 - [ ] `.registry.json` 中 `enabled: true` 且 `permissions_granted` 匹配
+- [ ] `manifest.json` 中 `features` 的 `default` 值均为 boolean
 - [ ] `test_expand/` 修改已同步到 `user_data/extensions/`
 - [ ] 前端：`window.__EXT_VUE__`（不是 `__VUE__`）
 - [ ] 前端：`App.vue` 已 import `ExtensionSlot`
