@@ -81,6 +81,38 @@ echo Node:  %NODE_CMD%
 %NODE_CMD% --version
 echo.
 
+:: ── Firewall check (LAN access on 5000/5173) ──
+echo [Firewall] Checking inbound rules for LAN access...
+
+netsh advfirewall firewall show rule name="Chat Flask 5000" >nul 2>&1
+if errorlevel 1 (
+    echo   - Rule "Chat Flask 5000" not found.
+    echo   - Requesting admin rights to add it... (accept UAC prompt)
+    powershell -Command "Start-Process netsh -ArgumentList 'advfirewall firewall add rule name=\"Chat Flask 5000\" dir=in action=allow protocol=TCP localport=5000' -Verb RunAs -Wait" >nul 2>&1
+    if errorlevel 1 (
+        echo   [WARN] Failed to add firewall rule for port 5000 (admin declined or error).
+    ) else (
+        echo   [OK]  Port 5000 opened for LAN.
+    )
+) else (
+    echo   [OK]  Port 5000 already open.
+)
+
+netsh advfirewall firewall show rule name="Chat Vite 5173" >nul 2>&1
+if errorlevel 1 (
+    echo   - Rule "Chat Vite 5173" not found.
+    echo   - Requesting admin rights to add it... (accept UAC prompt)
+    powershell -Command "Start-Process netsh -ArgumentList 'advfirewall firewall add rule name=\"Chat Vite 5173\" dir=in action=allow protocol=TCP localport=5173' -Verb RunAs -Wait" >nul 2>&1
+    if errorlevel 1 (
+        echo   [WARN] Failed to add firewall rule for port 5173 (admin declined or error).
+    ) else (
+        echo   [OK]  Port 5173 opened for LAN.
+    )
+) else (
+    echo   [OK]  Port 5173 already open.
+)
+echo.
+
 echo [1/2] Starting Flask backend (port 5000) ...
 start "Chat-Backend" cmd /k "cd /d %ROOT%\backend && %PY_CMD% -m pip install -r requirements.txt -q && %PY_CMD% run.py"
 
