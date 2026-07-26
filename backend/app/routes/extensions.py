@@ -283,3 +283,48 @@ def get_extension_manifest(ext_id):
     with open(manifest_path, "r", encoding="utf-8") as f:
         manifest = json.load(f)
     return ok(data=manifest)
+
+
+@api_bp.route("/extensions/<ext_id>/settings")
+def get_extension_settings(ext_id):
+    ext = get_extension(ext_id)
+    if not ext:
+        return fail(404, "扩展不存在")
+    settings = _read_extension_settings(ext_id)
+    return ok(data=settings)
+
+
+@api_bp.route("/extensions/<ext_id>/settings", methods=["PUT"])
+def put_extension_settings(ext_id):
+    ext = get_extension(ext_id)
+    if not ext:
+        return fail(404, "扩展不存在")
+
+    body = request.get_json(silent=True) or {}
+    new_features = body.get("features")
+    if not isinstance(new_features, dict):
+        return fail(400, "请求体必须包含 features 字段，且为对象类型")
+
+    # 读取 manifest 获取合法的 feature id 列表
+    manifest_path = os.path.join(_reg.EXTENSIONS_DIR, ext_id, "manifest.json")
+    known_ids = set()
+    if os.path.isfile(manifest_path):
+        with open(manifest_path, "r", encoding="utf-8") as f:
+            m = json.load(f)
+            for feat in m.get("features", []):
+                if isinstance(feat, dict) and "id" in feat:
+                    known_ids.add(feat["id"])
+
+    # 校验：未知 feature id
+    for fid in new_features:
+        if fid not in known_ids:
+            return fail(400, f"未知的功能 ID：{fid}")
+
+    # 校验：值必须是 boolean
+    for fid, val in new_features.items():
+        if not isinstance(val, bool):
+            return fail(400, f"功能 {fid} 的值必须是布尔类型")
+
+    # 保存
+    _write_extension_settings(ext_id, {"features": new_features})
+    return ok(message="设置已保存")

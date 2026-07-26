@@ -604,3 +604,231 @@ class TestGetManifest:
         assert data["data"]["id"] == "manifest-ext"
         assert data["data"]["name"] == "Manifest Ext"
         assert data["data"]["version"] == "2.0.0"
+
+
+# ============================================================
+# Task 2: /api/extensions/<id>/settings 测试
+# ============================================================
+
+class TestGetSettings:
+    def test_settings_not_found_ext(self, api_client):
+        resp = api_client.get("/api/extensions/nonexistent/settings")
+        data = resp.get_json()
+        assert data["code"] == 404
+
+    def test_settings_no_features_in_manifest(self, api_client, tmp_path, monkeypatch):
+        """manifest 无 features 声明时返回空 features"""
+        ext_dir = tmp_path / "extensions"
+        monkeypatch.setattr("app.extensions.installer.EXTENSIONS_DIR", str(ext_dir))
+        monkeypatch.setattr("app.extensions.loader.EXTENSIONS_DIR", str(ext_dir))
+        monkeypatch.setattr("app.extensions.registry.EXTENSIONS_DIR", str(ext_dir))
+
+        ext_path = ext_dir / "no-settings-ext"
+        ext_path.mkdir(parents=True)
+        manifest_data = {"id": "no-settings-ext", "name": "No Settings", "version": "1.0.0",
+                         "permissions": [], "ext_points": {"backend": [], "frontend": []},
+                         "min_app_version": "1.0.0"}
+        (ext_path / "manifest.json").write_text(json.dumps(manifest_data), encoding="utf-8")
+
+        from app.extensions.registry import add_extension, write_registry
+        write_registry({"extensions": {}})
+        add_extension("no-settings-ext", {
+            "version": "1.0.0", "enabled": True,
+            "installed_at": "2026-01-01T00:00:00Z",
+            "install_method": "zip",
+            "permissions_granted": []
+        })
+
+        resp = api_client.get("/api/extensions/no-settings-ext/settings")
+        data = resp.get_json()
+        assert data["code"] == 0
+        assert data["data"]["features"] == {}
+
+    def test_settings_with_features_defaults(self, api_client, tmp_path, monkeypatch):
+        """manifest 有 features 声明 + 无 settings.json → 返回 default 值"""
+        ext_dir = tmp_path / "extensions"
+        monkeypatch.setattr("app.extensions.installer.EXTENSIONS_DIR", str(ext_dir))
+        monkeypatch.setattr("app.extensions.loader.EXTENSIONS_DIR", str(ext_dir))
+        monkeypatch.setattr("app.extensions.registry.EXTENSIONS_DIR", str(ext_dir))
+
+        ext_path = ext_dir / "feat-ext"
+        ext_path.mkdir(parents=True)
+        manifest_data = {
+            "id": "feat-ext", "name": "Feature Ext", "version": "1.0.0",
+            "permissions": [], "ext_points": {"backend": [], "frontend": []},
+            "min_app_version": "1.0.0",
+            "features": [
+                {"id": "auto-save", "label": "自动保存", "description": "...", "default": True},
+                {"id": "dark-mode", "label": "暗色模式", "description": "...", "default": False},
+            ]
+        }
+        (ext_path / "manifest.json").write_text(json.dumps(manifest_data), encoding="utf-8")
+
+        from app.extensions.registry import add_extension, write_registry
+        write_registry({"extensions": {}})
+        add_extension("feat-ext", {
+            "version": "1.0.0", "enabled": True,
+            "installed_at": "2026-01-01T00:00:00Z",
+            "install_method": "zip",
+            "permissions_granted": []
+        })
+
+        resp = api_client.get("/api/extensions/feat-ext/settings")
+        data = resp.get_json()
+        assert data["code"] == 0
+        assert data["data"]["features"]["auto-save"] is True
+        assert data["data"]["features"]["dark-mode"] is False
+
+    def test_settings_existing_file(self, api_client, tmp_path, monkeypatch):
+        """已有 settings.json → 返回其内容"""
+        ext_dir = tmp_path / "extensions"
+        monkeypatch.setattr("app.extensions.installer.EXTENSIONS_DIR", str(ext_dir))
+        monkeypatch.setattr("app.extensions.loader.EXTENSIONS_DIR", str(ext_dir))
+        monkeypatch.setattr("app.extensions.registry.EXTENSIONS_DIR", str(ext_dir))
+
+        ext_path = ext_dir / "cached-ext"
+        ext_path.mkdir(parents=True)
+        manifest_data = {
+            "id": "cached-ext", "name": "Cached", "version": "1.0.0",
+            "permissions": [], "ext_points": {"backend": [], "frontend": []},
+            "min_app_version": "1.0.0",
+            "features": [{"id": "feat-1", "label": "F1", "description": "", "default": True}]
+        }
+        (ext_path / "manifest.json").write_text(json.dumps(manifest_data), encoding="utf-8")
+        # 写入一个已修改过的 settings.json（用户关掉了 feat-1）
+        (ext_path / "settings.json").write_text(
+            '{"features": {"feat-1": false}}', encoding="utf-8")
+
+        from app.extensions.registry import add_extension, write_registry
+        write_registry({"extensions": {}})
+        add_extension("cached-ext", {
+            "version": "1.0.0", "enabled": True,
+            "installed_at": "2026-01-01T00:00:00Z",
+            "install_method": "zip",
+            "permissions_granted": []
+        })
+
+        resp = api_client.get("/api/extensions/cached-ext/settings")
+        data = resp.get_json()
+        assert data["code"] == 0
+        # 应返回用户修改后的值，不是 default
+        assert data["data"]["features"]["feat-1"] is False
+
+
+class TestPutSettings:
+    def test_put_settings_not_found(self, api_client):
+        resp = api_client.put("/api/extensions/nonexistent/settings",
+                              json={"features": {"x": True}})
+        data = resp.get_json()
+        assert data["code"] == 404
+
+    def test_put_settings_unknown_feature_id(self, api_client, tmp_path, monkeypatch):
+        """传入 manifest 中未声明的 feature id 应被拒绝"""
+        ext_dir = tmp_path / "extensions"
+        monkeypatch.setattr("app.extensions.installer.EXTENSIONS_DIR", str(ext_dir))
+        monkeypatch.setattr("app.extensions.loader.EXTENSIONS_DIR", str(ext_dir))
+        monkeypatch.setattr("app.extensions.registry.EXTENSIONS_DIR", str(ext_dir))
+
+        ext_path = ext_dir / "strict-ext"
+        ext_path.mkdir(parents=True)
+        manifest_data = {
+            "id": "strict-ext", "name": "Strict", "version": "1.0.0",
+            "permissions": [], "ext_points": {"backend": [], "frontend": []},
+            "min_app_version": "1.0.0",
+            "features": [{"id": "allowed-feat", "label": "OK", "description": "", "default": True}]
+        }
+        (ext_path / "manifest.json").write_text(json.dumps(manifest_data), encoding="utf-8")
+
+        from app.extensions.registry import add_extension, write_registry
+        write_registry({"extensions": {}})
+        add_extension("strict-ext", {
+            "version": "1.0.0", "enabled": True,
+            "installed_at": "2026-01-01T00:00:00Z",
+            "install_method": "zip",
+            "permissions_granted": []
+        })
+
+        resp = api_client.put("/api/extensions/strict-ext/settings",
+                              json={"features": {"unknown-feat": True}})
+        data = resp.get_json()
+        assert data["code"] == 400  # 未声明的 feature id
+        assert "unknown-feat" in data["message"]
+
+    def test_put_settings_non_boolean_value(self, api_client, tmp_path, monkeypatch):
+        """非 boolean 值应被拒绝"""
+        ext_dir = tmp_path / "extensions"
+        monkeypatch.setattr("app.extensions.installer.EXTENSIONS_DIR", str(ext_dir))
+        monkeypatch.setattr("app.extensions.loader.EXTENSIONS_DIR", str(ext_dir))
+        monkeypatch.setattr("app.extensions.registry.EXTENSIONS_DIR", str(ext_dir))
+
+        ext_path = ext_dir / "type-ext"
+        ext_path.mkdir(parents=True)
+        manifest_data = {
+            "id": "type-ext", "name": "Type", "version": "1.0.0",
+            "permissions": [], "ext_points": {"backend": [], "frontend": []},
+            "min_app_version": "1.0.0",
+            "features": [{"id": "feat-1", "label": "F1", "description": "", "default": True}]
+        }
+        (ext_path / "manifest.json").write_text(json.dumps(manifest_data), encoding="utf-8")
+
+        from app.extensions.registry import add_extension, write_registry
+        write_registry({"extensions": {}})
+        add_extension("type-ext", {
+            "version": "1.0.0", "enabled": True,
+            "installed_at": "2026-01-01T00:00:00Z",
+            "install_method": "zip",
+            "permissions_granted": []
+        })
+
+        resp = api_client.put("/api/extensions/type-ext/settings",
+                              json={"features": {"feat-1": "not-a-bool"}})
+        data = resp.get_json()
+        assert data["code"] == 400
+
+    def test_put_settings_success(self, api_client, tmp_path, monkeypatch):
+        """成功保存并持久化"""
+        ext_dir = tmp_path / "extensions"
+        monkeypatch.setattr("app.extensions.installer.EXTENSIONS_DIR", str(ext_dir))
+        monkeypatch.setattr("app.extensions.loader.EXTENSIONS_DIR", str(ext_dir))
+        monkeypatch.setattr("app.extensions.registry.EXTENSIONS_DIR", str(ext_dir))
+
+        ext_path = ext_dir / "save-ext"
+        ext_path.mkdir(parents=True)
+        manifest_data = {
+            "id": "save-ext", "name": "Save", "version": "1.0.0",
+            "permissions": [], "ext_points": {"backend": [], "frontend": []},
+            "min_app_version": "1.0.0",
+            "features": [
+                {"id": "feat-a", "label": "A", "description": "", "default": True},
+                {"id": "feat-b", "label": "B", "description": "", "default": False},
+            ]
+        }
+        (ext_path / "manifest.json").write_text(json.dumps(manifest_data), encoding="utf-8")
+
+        from app.extensions.registry import add_extension, write_registry
+        write_registry({"extensions": {}})
+        add_extension("save-ext", {
+            "version": "1.0.0", "enabled": True,
+            "installed_at": "2026-01-01T00:00:00Z",
+            "install_method": "zip",
+            "permissions_granted": []
+        })
+
+        # 先 PUT 修改
+        resp = api_client.put("/api/extensions/save-ext/settings",
+                              json={"features": {"feat-a": False, "feat-b": True}})
+        data = resp.get_json()
+        assert data["code"] == 0
+
+        # 验证文件已写入
+        settings_path = ext_path / "settings.json"
+        assert settings_path.is_file()
+        saved = json.loads(settings_path.read_text(encoding="utf-8"))
+        assert saved["features"]["feat-a"] is False
+        assert saved["features"]["feat-b"] is True
+
+        # GET 再次验证
+        resp = api_client.get("/api/extensions/save-ext/settings")
+        data = resp.get_json()
+        assert data["data"]["features"]["feat-a"] is False
+        assert data["data"]["features"]["feat-b"] is True
