@@ -175,10 +175,10 @@ function showToast(msg) {
 
 <style scoped>
 .preset-area { position: relative; }
-.preset-row { display: flex; gap: 6px; align-items: center; }
+.preset-row { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
 
 .preset-select {
-  flex: 1; padding: 7px 10px;
+  flex: 1; min-width: 140px; padding: 7px 10px;
   border: 1px solid var(--border-light);
   border-radius: var(--radius-sm);
   font-size: 13px; color: var(--text-primary);
