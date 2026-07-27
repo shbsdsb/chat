@@ -39,7 +39,7 @@ def create_app():
     # ── 扩展系统初始化（必须在 register_blueprint 之前，以便扩展注册 API 路由）──
     from app.extensions import get_extension_manager
     os.makedirs(os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), "user_data", "extensions"), exist_ok=True)
-    get_extension_manager().init(api_bp=flask_app)
+    get_extension_manager().init(api_bp=api_bp)
 
     flask_app.register_blueprint(api_bp, url_prefix="/api")
 

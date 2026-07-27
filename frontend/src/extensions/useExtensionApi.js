@@ -15,7 +15,8 @@ export function createExtensionApi(extensionId) {
     },
     getCurrentConversation() {
       const chatStore = useChatStore();
-      return chatStore.activeConversation;
+      if (!chatStore.activeConvId) return null;
+      return { id: chatStore.activeConvId };
     },
     getMessages(convId) {
       const chatStore = useChatStore();
@@ -23,7 +24,7 @@ export function createExtensionApi(extensionId) {
         const conv = chatStore.conversations.find(c => c.id === convId);
         return conv?.messages || [];
       }
-      return chatStore.activeConversation?.messages || [];
+      return chatStore.messages;
     },
     getSettings() {
       const settingsStore = useSettingsStore();

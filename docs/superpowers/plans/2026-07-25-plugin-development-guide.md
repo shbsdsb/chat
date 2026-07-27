@@ -1,10 +1,60 @@
+# Plugin Development Guide 文档重构 — 实现计划
+
+> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+
+**Goal:** 将 Plugin_Development_Guide.md 重构为三部分混合模式文档（Quick Start + 主题参考 + 注意事项），供熟悉 Vue 3/Flask 的开发者快速上手扩展开发。
+
+**Architecture:** 单文件 Markdown 文档，内容全部内嵌，引用现有 `test_expand/dashboard/` 为参考。原文档内容精简整合到第三部分。
+
+**Tech Stack:** Markdown，无代码依赖。
+
+## Global Constraints
+
+- 目标读者：熟悉 Vue 3（组合式 API、h 渲染函数、Pinia）和 Flask（Blueprint），但未接触过本项目的扩展系统
+- 代码全部内嵌在文档中，不创建新的示例扩展目录
+- 原 `Plugin_Development_Guide.md` 内容整合到第三部分，不丢失任何检查项
+- 所有 API 名称、文件路径、属性名必须与源码一致
+- 预计总行数：1800-2500 行 Markdown
+
+## File Structure
+
+| 文件 | 操作 | 职责 |
+|------|------|------|
+| `Plugin_Development_Guide.md` | 覆盖重写 | 完整的三部分扩展开发文档 |
+| `docs/superpowers/specs/2026-07-25-plugin-development-guide-design.md` | 只读参考 | 设计规格 |
+
+## Key Source Files to Reference
+
+| 文件 | 用途 |
+|------|------|
+| `test_expand/dashboard/manifest.json` | 确认 manifest 真实字段 |
+| `test_expand/dashboard/backend.py` | 确认钩子 ctx 结构、路由注册模式 |
+| `test_expand/dashboard/frontend/index.js` | 确认组件注册模式 |
+| `test_expand/dashboard/frontend/components/DashboardFloating.js` | 确认 h() 渲染函数写法 |
+| `backend/app/extensions/loader.py` | 确认 EXT_POINT_TO_FUNC 映射和 load_extension 流程 |
+| `backend/app/extensions/permissions.py` | 确认权限常量列表 |
+| `frontend/src/extensions/useExtensionApi.js` | 确认 API 方法签名 |
+| `frontend/src/main.js` | 确认 __EXT_VUE__ 注入的准确 API 列表 |
+| `backend/app/extensions/hooks.py` | 确认 HookDispatcher 超时和行为 |
+
+---
+
+### Task 1: 撰写 Part 1 — Quick Start（约 500 行）
+
+**Files:**
+- Modify: `Plugin_Development_Guide.md`（新建/覆盖）
+
+**Interfaces:**
+- Produces: 文档 1.1 ~ 1.3 节，引入扩展系统概念并完成 Hello World
+
+- [ ] **Step 1: 撰写 1.1 什么是扩展系统**
+
+在文件开头写入标题和简介部分：
+
+```markdown
 # 插件（扩展）开发指南
 
 > 本文档教你如何为 Chat 应用开发扩展。扩展是运行在应用内的独立功能模块，可以注入 UI 面板、监听 AI 响应、注册自定义 API 路由。
->
-> **前置要求：** 熟悉 Vue 3（组合式 API、Pinia、h 渲染函数）和 Flask（Blueprint、路由装饰器）。未接触过本项目的扩展系统没关系，本文档从头讲起。
-
----
 
 ## 第一部分：快速入门
 
@@ -16,8 +66,7 @@
 - **backend.py** — 后端逻辑（可选），注册生命周期钩子或自定义 API 路由
 - **frontend/** — 前端 UI（可选），使用 Vue 3 渲染函数编写界面组件
 
-#### 扩展能做什么？
-
+扩展能做什么？
 | 能力 | 说明 |
 |------|------|
 | 注入面板 | 在应用界面的指定位置渲染自定义 UI（如悬浮窗、侧边栏） |
@@ -25,21 +74,27 @@
 | 注册 API 路由 | 添加自定义后端接口，供前端扩展调用 |
 | 读写数据 | 在自己的存储目录中持久化 JSON 数据 |
 
-#### 加载流程
+**加载流程一图胜千言：**
 
-```
+\`\`\`
 开发者编写扩展 → 放入 test_expand/ 或通过 ZIP/Git 安装
      ↓
 .registry.json 注册（enabled: true 驱动加载）
      ↓
 Flask 启动时：ExtensionManager 遍历注册表 → import backend.py → 注册钩子/路由
 Vue 启动时：ExtensionSlot 拉取 frontend/ JS → 注入 <script> → 组件渲染
-```
+\`\`\`
 
 > 接下来用 5 分钟创建一个 Hello World 扩展，你会直观理解整个流程。
+```
 
----
+- [ ] **Step 2: 验证 1.1 节**
 
+检查：概念准确（三部分结构）、加载流程图正确、无与源码矛盾的描述。
+
+- [ ] **Step 3: 撰写 1.2 5 分钟 Hello World**
+
+```markdown
 ### 1.2 5 分钟 Hello World
 
 创建一个最小可运行的扩展，在应用界面上显示 "Hello World!" 面板。
@@ -48,7 +103,7 @@ Vue 启动时：ExtensionSlot 拉取 frontend/ JS → 注入 <script> → 组件
 
 在 `test_expand/hello-world/` 下创建：
 
-```json
+\`\`\`json
 // test_expand/hello-world/manifest.json
 {
   "id": "hello-world",
@@ -62,12 +117,12 @@ Vue 启动时：ExtensionSlot 拉取 frontend/ JS → 注入 <script> → 组件
   },
   "min_app_version": "1.2.0"
 }
-```
+\`\`\`
 
 | 字段 | 这里的含义 |
 |------|-----------|
 | `id` | 唯一标识，必须与目录名一致 |
-| `permissions` | 空数组——因为没有后端逻辑，无需权限 |
+| `permissions` | 因为没有后端逻辑，无需权限 |
 | `ext_points.frontend` | `["panel"]` 表示要在全局面板插槽渲染 |
 | `ext_points.backend` | `[]` 表示不使用后端钩子 |
 
@@ -75,16 +130,14 @@ Vue 启动时：ExtensionSlot 拉取 frontend/ JS → 注入 <script> → 组件
 
 即使不使用后端逻辑，也需要创建一个空的 `backend.py`（扩展加载器要求此文件存在）：
 
-```python
+\`\`\`python
 # test_expand/hello-world/backend.py
 # 本扩展无后端逻辑，仅需此文件满足加载要求
-```
-
-> **为什么需要空文件？** 扩展加载器 `load_extension()` 通过 `importlib` 加载 `backend.py`，如果文件不存在会报错。即使不需要后端功能，也必须保留此占位文件。
+\`\`\`
 
 #### Step 3：编写前端组件 frontend/index.js
 
-```javascript
+\`\`\`javascript
 // test_expand/hello-world/frontend/index.js
 (function() {
   const { h, ref, onMounted } = window.__EXT_VUE__;
@@ -132,14 +185,14 @@ Vue 启动时：ExtensionSlot 拉取 frontend/ JS → 注入 <script> → 组件
     panel: [HelloPanel]
   };
 })();
-```
+\`\`\`
 
 **关键点解释：**
 
 | 要点 | 说明 |
 |------|------|
 | IIFE 包裹 | `(function() { ... })()` 隔离作用域，避免污染全局 |
-| `window.__EXT_VUE__` | 应用注入的 Vue API，包含 `{ h, ref, computed, watch, onMounted, onBeforeUnmount }` |
+| `window.__EXT_VUE__` | 应用注入的 Vue API，包含 `h, ref, computed, watch, onMounted, onBeforeUnmount` |
 | `props: ['api']` | 接收 ExtensionSlot 传入的 `api` 对象，用于访问应用 Store |
 | `h()` 渲染函数 | Vue 3 渲染函数，等价于 `<template>` 的编译结果 |
 | 注册表 key | `'hello-world'` 必须与 `manifest.json` 中的 `id` 完全一致 |
@@ -149,19 +202,19 @@ Vue 启动时：ExtensionSlot 拉取 frontend/ JS → 注入 <script> → 组件
 
 扩展开发在 `test_expand/` 下进行，运行时从 `user_data/extensions/` 加载。需要将扩展复制过去：
 
-```bash
-# Windows PowerShell
+\`\`\`bash
+# Windows (PowerShell)
 Copy-Item -Recurse test_expand/hello-world user_data/extensions/hello-world
 
 # macOS / Linux
 cp -r test_expand/hello-world user_data/extensions/hello-world
-```
+\`\`\`
 
 #### Step 5：注册到 .registry.json
 
 编辑 `user_data/extensions/.registry.json`，添加：
 
-```json
+\`\`\`json
 {
   "hello-world": {
     "id": "hello-world",
@@ -170,9 +223,9 @@ cp -r test_expand/hello-world user_data/extensions/hello-world
     "permissions_granted": []
   }
 }
-```
+\`\`\`
 
-> 如果 `.registry.json` 中已有其他扩展，在 JSON 对象中追加即可——不要覆盖整个文件。
+> 如果 `.registry.json` 中已有其他扩展，在 JSON 对象中追加即可（不要覆盖整个文件）。
 
 #### Step 6：验证
 
@@ -188,12 +241,18 @@ cp -r test_expand/hello-world user_data/extensions/hello-world
 ---
 
 > 🎉 恭喜！你已完成第一个扩展。下面深入了解每个模块的细节。
+```
 
----
+- [ ] **Step 4: 验证 1.2 节**
 
+检查：所有代码与实际 API 一致、manifest 字段与 installer/loader 校验逻辑吻合、file 路径正确。
+
+- [ ] **Step 5: 撰写 1.3 目录结构速览**
+
+```markdown
 ### 1.3 目录结构速览
 
-```
+\`\`\`
 chat/
 ├── test_expand/                    ← 📝 开发工作目录（你在这里写代码）
 │   └── <extension_id>/
@@ -208,7 +267,7 @@ chat/
 │   ├── .registry.json              ← 注册表：enabled: true 才会被加载
 │   └── <extension_id>/
 │       └── ...（与 test_expand 内结构相同）
-```
+\`\`\`
 
 | 目录 | 用途 |
 |------|------|
@@ -217,7 +276,35 @@ chat/
 | `.registry.json` | 注册表，记录了所有扩展的启用状态和授权权限 |
 
 > ⚠️ 两个目录各自独立。修改 `test_expand/` 后必须手动同步到 `user_data/extensions/`，否则不会生效。
+```
 
+- [ ] **Step 6: 验证 1.3 节**
+
+检查：目录结构与实际项目一致。
+
+- [ ] **Step 7: Commit Part 1**
+
+\`\`\`bash
+git add Plugin_Development_Guide.md
+git commit -m "docs: add Part 1 — Quick Start for plugin development guide"
+\`\`\`
+
+---
+
+### Task 2: 撰写 Part 2.1-2.2 — 架构总览 + manifest.json 规范（约 350 行）
+
+**Files:**
+- Modify: `Plugin_Development_Guide.md`（追加 Part 2 开头）
+
+**Interfaces:**
+- Consumes: Part 1 建立的文档结构和术语
+- Produces: 2.1 节（全链路架构图）和 2.2 节（manifest.json 完整字段表）
+
+- [ ] **Step 1: 撰写 2.1 架构总览**
+
+在 Part 1 之后追加：
+
+```markdown
 ---
 
 ## 第二部分：主题参考
@@ -228,7 +315,7 @@ chat/
 
 #### 后端加载流程
 
-```
+\`\`\`
 Flask 启动 (create_app)
   └→ ExtensionManager.init(api_bp)
        └→ load_all_enabled()
@@ -238,11 +325,11 @@ Flask 启动 (create_app)
                       ├→ 读取 manifest.json 的 ext_points.backend
                       ├→ 若含 api_route → 调用 register_api_routes(api_bp)
                       └→ 若含 chat.post_receive → dispatcher.register_hook()
-```
+\`\`\`
 
 #### 前端加载流程
 
-```
+\`\`\`
 Vue 应用启动 (main.js)
   └→ App.vue 中的 <ExtensionSlot name="panel" />
        └→ onMounted：遍历扩展列表
@@ -253,26 +340,26 @@ Vue 应用启动 (main.js)
                  └→ markRaw() 防止深度反应化
                  └→ shallowRef() 浅层引用
                  └→ <component :is> 渲染，传入 props.api
-```
+\`\`\`
 
 #### 钩子触发流程
 
-```
+\`\`\`
 AI 响应完成 (conversations.py)
-  └→ 构造 hook_ctx = { conversation_id, messages, request_body, response_body, settings, ... }
+  └→ 构造 hook_ctx = { conv_id, messages, last_message, settings }
        └→ dispatcher.dispatch("chat.post_receive", hook_ctx)
             └→ 线程池执行每个扩展的 on_chat_post_receive(ctx)
                  ├→ 超时限制：30 秒
                  ├→ 异常隔离：单个扩展报错不影响其他
                  └→ 返回值合并到消息的 extensions 字段
-```
+\`\`\`
 
 #### 核心模块一览
 
 | 模块 | 文件位置 | 作用 |
 |------|----------|------|
 | ExtensionManager | `backend/app/extensions/__init__.py` | 单例管理器，init() 驱动全量加载，reload_extension() 热重载 |
-| loader | `backend/app/extensions/loader.py` | 读取 manifest，动态加载 backend.py，按 EXT_POINT_TO_FUNC 映射注册 |
+| loader | `backend/app/extensions/loader.py` | 读取 manifest，动态加载 backend.py，按映射注册扩展点 |
 | HookDispatcher | `backend/app/extensions/hooks.py` | 钩子调度器，dispatch() 用线程池并发执行，30s 超时 |
 | registry | `backend/app/extensions/registry.py` | .registry.json 的 CRUD，线程安全（threading.Lock） |
 | installer | `backend/app/extensions/installer.py` | ZIP/Git 安装，manifest 校验，权限验证 |
@@ -281,9 +368,19 @@ AI 响应完成 (conversations.py)
 | useExtensionApi | `frontend/src/extensions/useExtensionApi.js` | 扩展安全访问 Pinia Store 的封装 |
 | extensions Store | `frontend/src/stores/extensions.js` | 扩展列表、安装/卸载/启停等操作的状态管理 |
 | extensions API | `frontend/src/api/extensions.js` | 前端对 /api/extensions 的 HTTP 请求封装 |
+| ExtensionManager 组件 | `frontend/src/components/ExtensionManager.vue` | 扩展管理面板 UI |
+```
 
----
+- [ ] **Step 2: 验证 2.1 节**
 
+对照以下源文件确认流程图和模块描述准确：
+- `backend/app/extensions/loader.py` — EXT_POINT_TO_FUNC 映射
+- `backend/app/extensions/hooks.py` — dispatch 超时
+- `frontend/src/extensions/ExtensionSlot.vue` — markRaw/shallowRef 逻辑
+
+- [ ] **Step 3: 撰写 2.2 manifest.json 完整规范**
+
+```markdown
 ### 2.2 manifest.json 完整规范
 
 manifest.json 是扩展的声明文件，应用通过它了解扩展的身份、需求和能力。
@@ -295,7 +392,7 @@ manifest.json 是扩展的声明文件，应用通过它了解扩展的身份、
 | `id` | string | 字母数字下划线连字符，1-64 字符，与目录名一致 | 扩展唯一标识 |
 | `name` | string | 任意 | 扩展显示名称 |
 | `version` | string | 语义化版本（如 `"1.0.0"`） | 版本号 |
-| `permissions` | string[] | 必须是下方权限表中的值 | 声明扩展所需权限 |
+| `permissions` | string[] | 见下方权限表 | 声明扩展所需权限 |
 | `ext_points` | object | `{ backend: string[], frontend: string[] }` | 声明使用的扩展点 |
 | `min_app_version` | string | 语义化版本 | 最低兼容的应用版本 |
 
@@ -306,7 +403,6 @@ manifest.json 是扩展的声明文件，应用通过它了解扩展的身份、
 | `description` | string | 简要描述，在扩展管理面板中展示 |
 | `author` | string | 作者名 |
 | `homepage` | string | 项目主页 URL |
-| `features` | array | 声明可配置的功能开关，见下方 features 规范 |
 
 #### 扩展点 (ext_points)
 
@@ -327,175 +423,21 @@ manifest.json 是扩展的声明文件，应用通过它了解扩展的身份、
 
 #### 权限列表
 
-应用支持的权限（定义在 `backend/app/extensions/permissions.py`）：
-
 | 权限 | 说明 | 典型场景 |
 |------|------|----------|
-| `read:conversations` | 读取会话数据 | 统计分析、会话管理 |
-| `read:world_info` | 读取 World Info 条目 | 上下文增强 |
-| `write:conversations` | 写入/修改会话数据 | 消息增强、自动回复 |
+| `read:conversations` | 读取会话列表 | 统计分析、会话管理 |
+| `read:messages` | 读取消息内容 | Token 统计、内容分析 |
+| `write:messages` | 写入/修改消息 | 消息增强、自动回复 |
 | `hook:chat` | 注册聊天钩子 | 使用 `chat.post_receive` / `chat.pre_send` 时必需 |
-| `register:provider` | 注册自定义 AI 提供商 | 接入第三方模型 |
-| `network` | 发起外部网络请求 | 需要访问外部 API 时必需 |
-
-> 权限必须与 `.registry.json` 中的 `permissions_granted` 一致，否则安装时校验不通过。
-
-#### features 规范 — 可配置功能开关
-
-`features` 允许扩展作者声明可由用户按需开关的功能项。每个功能项是一个对象：
-
-| 字段 | 类型 | 必填 | 说明 |
-|------|------|------|------|
-| `id` | string | ✅ | 功能唯一标识（字母数字下划线连字符），在扩展内唯一 |
-| `label` | string | ✅ | 在扩展详情抽屉中展示的功能名称 |
-| `description` | string | ❌ | 辅助说明文本，展示在 label 下方 |
-| `default` | boolean | ✅ | 首次安装时的初始状态 |
-
-**示例：**
-
-```json
-{
-  "features": [
-    {
-      "id": "show-token-count",
-      "label": "显示 Token 计数",
-      "description": "在面板中显示每次对话的 Token 消耗量",
-      "default": true
-    },
-    {
-      "id": "auto-refresh",
-      "label": "自动刷新指标",
-      "description": "每 30 秒自动刷新面板中的统计数据",
-      "default": false
-    }
-  ]
-}
-```
-
-**用户视角：**
-
-- 安装扩展后，在扩展管理页面点击「详情」打开右侧抽屉
-- 如果扩展声明了 `features`，抽屉底部会出现「功能开关」区域
-- 每个 feature 渲染为一个 toggle 开关，含 label 和 description
-- 切换开关即时保存，状态持久化到扩展目录下的 `settings.json`
-- 开关值通过 `props.settings` 传入扩展前端组件
-
-**持久化文件 `settings.json`：**
-
-用户修改开关后，应用在扩展目录下自动创建/更新 `settings.json`：
-
-```json
-{
-  "features": {
-    "show-token-count": true,
-    "auto-refresh": false
-  }
-}
-```
-
-**扩展运行时读取：**
-
-前端扩展组件通过 `props.settings` 接收当前开关状态：
-
-```javascript
-// frontend/index.js
-(function() {
-  const { h, ref, computed } = window.__EXT_VUE__;
-
-  const MyPanel = {
-    props: ['api', 'settings'],
-    setup(props) {
-      const showToken = computed(() => props.settings.features?.['show-token-count']);
-      return () => showToken.value ? h('div', 'Token: 1,234') : null;
-    }
-  };
-
-  window.__EXTENSION_REGISTRY__ = window.__EXTENSION_REGISTRY__ || {};
-  window.__EXTENSION_REGISTRY__['my-extension'] = {
-    panel: [MyPanel]
-  };
-})();
-```
-
-**后端扩展读取：**
-
-后端 `backend.py` 中可通过读取 `settings.json` 获取开关状态：
-
-```python
-import json, os
-
-def _get_settings():
-    path = os.path.join(os.path.dirname(__file__), 'settings.json')
-    if os.path.isfile(path):
-        with open(path, 'r', encoding='utf-8') as f:
-            return json.load(f)
-    return {'features': {}}
-
-def on_chat_post_receive(ctx):
-    settings = _get_settings()
-    if settings.get('features', {}).get('auto-refresh'):
-        # 执行自动刷新逻辑
-        pass
-    return None
-```
-
-**约束：**
-
-- `features` 为可选字段，省略时详情抽屉不显示功能开关区域
-- `id` 在扩展内必须唯一
-- 用户修改的 feature id 必须在 manifest 的 `features` 中声明过（后端校验）
-- 值必须是 boolean 类型
-- `settings.json` 不存在时，系统按 manifest 的 `default` 自动生成
-
-#### 模块（group）嵌套
-
-`features` 支持 `type: "group"` 声明模块，将相关功能归类到一个可折叠的父级开关下：
-
-| 字段 | 类型 | 说明 |
-|------|------|------|
-| `type` | string | `"group"` 表示模块，省略表示叶子功能 |
-| `children` | array | 子功能数组，结构与叶子功能相同 |
-
-**group 示例：**
-
-```json
-{
-  "features": [
-    { "id": "simple-toggle", "label": "简单开关", "default": true },
-    {
-      "id": "session-metrics",
-      "label": "会话指标",
-      "type": "group",
-      "default": true,
-      "children": [
-        { "id": "hit-rate", "label": "命中率", "description": "显示缓存命中率", "default": true },
-        { "id": "request-count", "label": "请求次数", "description": "显示请求次数", "default": true }
-      ]
-    }
-  ]
-}
-```
-
-**约束：**
-- 仅支持一级嵌套（`children` 内不再含 `type: "group"`）
-- 模块 `id` 与子功能 `id` 在 settings 中以点号连接：`session-metrics.hit-rate`
-- 模块开关关闭时子功能全部关闭但**保留键**（记忆关闭前的状态）
-- 模块开关重新开启时不覆盖已有子功能状态
-- 用户手动关闭所有子功能时，模块开关**不会**自动关闭
-
-**前端读取子功能设置：**
-
-```javascript
-const feat = props.settings?.features || {};
-const showHitRate = feat['session-metrics.hit-rate'] !== false;
-const showRequestCount = feat['session-metrics.request-count'] !== false;
-```
+| `api:route` | 注册自定义 API 路由 | 使用 `api_route` 扩展点时必需 |
+| `storage:read` | 读取扩展存储 | 读取持久化数据 |
+| `storage:write` | 写入扩展存储 | 保存统计数据、配置等 |
 
 #### 完整示例
 
-以 Dashboard 扩展为例，展示一个使用多个扩展点的 manifest：
+以 Dashboard 扩展为例，展示一个使用全部扩展点的 manifest：
 
-```json
+\`\`\`json
 {
   "id": "dashboard",
   "name": "Dashboard",
@@ -506,37 +448,58 @@ const showRequestCount = feat['session-metrics.request-count'] !== false;
     "backend": ["chat.post_receive", "api_route"],
     "frontend": ["panel"]
   },
-  "min_app_version": "1.2.0",
-  "features": [
-    {
-      "id": "show-token-count",
-      "label": "显示 Token 计数",
-      "description": "在面板中显示每次对话的 Token 消耗量",
-      "default": true
-    },
-    {
-      "id": "auto-refresh",
-      "label": "自动刷新指标",
-      "description": "每 30 秒自动刷新面板中的统计数据",
-      "default": false
-    }
-  ]
+  "min_app_version": "1.2.0"
 }
+\`\`\`
+
+> 权限必须与 `.registry.json` 中的 `permissions_granted` 一致，否则安装时校验不通过。
 ```
 
-> 参考：`test_expand/dashboard/manifest.json`
+- [ ] **Step 4: 验证 2.2 节**
+
+对照以下文件确认字段和权限：
+- `backend/app/extensions/permissions.py` — 权限常量
+- `backend/app/extensions/installer.py` — `_validate_manifest()` 校验逻辑
+- `backend/app/extensions/loader.py` — `EXT_POINT_TO_FUNC` 映射
+
+- [ ] **Step 5: Commit Part 2.1-2.2**
+
+\`\`\`bash
+git add Plugin_Development_Guide.md
+git commit -m "docs: add Part 2.1-2.2 — architecture overview and manifest.json spec"
+\`\`\`
 
 ---
 
+### Task 3: 撰写 Part 2.3 — 后端开发（约 450 行）
+
+**Files:**
+- Modify: `Plugin_Development_Guide.md`（追加 2.3 节）
+
+**Interfaces:**
+- Consumes: 2.1 架构中的术语（HookDispatcher, Blueprint），2.2 中的扩展点声明
+- Produces: 2.3.1 ~ 2.3.4 节
+
+- [ ] **Step 1: 查阅源码确认钩子 ctx 结构**
+
+阅读以下文件并记录准确的 ctx 字段：
+- `backend/app/routes/conversations.py` — 搜索 `hook_ctx` 构造处
+- `test_expand/dashboard/backend.py` — 看 `on_chat_post_receive` 如何使用 ctx
+
+- [ ] **Step 2: 撰写 2.3.1 生命周期钩子详解**
+
+```markdown
 ### 2.3 后端开发
 
 #### 2.3.1 生命周期钩子详解
 
-钩子是扩展介入应用行为的入口。在 manifest 中声明对应的 `ext_points.backend`，然后在 backend.py 中实现同名函数即可。
+钩子是扩展介入应用行为的入口。实现对应的函数即可。
 
 ##### chat.post_receive — AI 响应完成后触发
 
-```python
+在 manifest 中声明 `ext_points.backend: ["chat.post_receive"]`，然后在 backend.py 中实现：
+
+\`\`\`python
 # backend.py
 def on_chat_post_receive(ctx):
     """
@@ -544,90 +507,96 @@ def on_chat_post_receive(ctx):
 
     ctx 结构（dict）：
     {
-        "conversation_id": str,    # 会话 ID
-        "messages": [              # 完整消息历史（含刚完成的 AI 回复）
-            {"role": "user" | "assistant", "content": str, ...},
+        "conv_id": str,          # 会话 ID
+        "messages": [            # 完整消息历史
+            {
+                "role": "user" | "assistant",
+                "content": str,
+                "id": str,
+                "timestamp": str
+            },
             ...
         ],
-        "request_body": {          # 发送给 AI 的请求体
-            "model": str,
-            "messages": [...],
+        "last_message": {        # 刚完成的 AI 回复（messages 的最后一条）
+            "role": "assistant",
+            "content": "...",
+            "id": str,
+            "timestamp": str
         },
-        "response_body": {         # AI 返回的响应体
-            "content": str,
-            "reasoning_content": str | None,  # 推理内容（o1 等模型）
-        },
-        "world_info_entries": list,  # World Info 条目列表
-        "settings": {              # 当前使用的预设配置
+        "settings": {            # 当前使用的预设配置
             "api_key": "sk-...",
             "base_url": "https://...",
-            "model": str,
+            "model": "gpt-4",
             ...
-        },
+        }
     }
 
-    返回值（可选）：dict，会合并到前端消息对象的 extensions 字段
+    返回值（可选）：dict，会合并到前端消息对象的 extensions 数组中
     """
-    conv_id = ctx.get("conversation_id")
-    if not conv_id:
-        return None
-
-    response_body = ctx.get("response_body", {})
-    content = response_body.get("content", "")
+    conv_id = ctx["conv_id"]
+    last_msg = ctx["last_message"]
 
     # 示例：统计 token 数量
-    token_count = len(content.split())
+    token_count = len(last_msg.get("content", "").split())
 
     # 写入自己的数据文件（见 2.3.3 数据持久化）
     _save_stats(conv_id, {"tokens": token_count})
 
-    # 返回值会合并到消息的 extensions 字段
+    # 返回值会出现在前端消息中
     return {"token_count": token_count}
-```
+\`\`\`
 
 **行为规范：**
 
 | 行为 | 说明 |
 |------|------|
-| 超时 | 30 秒，超时后强制中断并记录警告日志 |
-| 异常处理 | 单个扩展报错不影响其他扩展，异常会被捕获并记录 |
-| 返回值 | 可选。若返回 dict，会以 `{ extension_id: {...} }` 格式合并到消息的 `extensions` 字段 |
-| 线程安全 | 每个 handler 在独立线程中执行 |
+| 超时 | 30 秒，超时后强制中断 |
+| 异常处理 | 单个扩展报错不影响其他扩展，错误会写入日志 |
+| 返回值 | 可选，若返回 dict，会以 `{ extension_id: {...} }` 格式合并到消息的 `extensions` 字段 |
+| 线程安全 | 使用 threading.Lock 保护文件写入（参考 2.3.3） |
 
 > ⚠️ 不要在钩子中执行耗时操作（如调用外部 API 且不设超时）。30 秒超时后会中断，且可能影响后续扩展的执行调度。
 
 ##### chat.pre_send — 消息发送前触发
 
-```python
+在 manifest 中声明 `ext_points.backend: ["chat.pre_send"]`：
+
+\`\`\`python
 def on_chat_pre_send(ctx):
     """
     消息发送给 AI 前调用。
 
     ctx 结构：
     {
-        "conversation_id": str,
-        "messages": [...],          # 当前消息历史
-        "pending_message": {...},   # 即将发送的消息
+        "conv_id": str,
+        "messages": [...],        # 当前消息历史
+        "pending_message": {...}, # 即将发送的消息
         "settings": {...},
     }
 
     返回值可修改 pending_message 的内容。
     """
     # 示例：在发送前添加系统提示
-    pending = ctx.get("pending_message", {})
-    pending["content"] = "[系统提示：请用中文回答]\n" + pending.get("content", "")
+    pending = ctx["pending_message"]
+    pending["content"] = "[系统提示：请用中文回答]\n" + pending["content"]
     return {"modified": True}
+\`\`\`
+
+> ⚠️ 此钩子已定义映射但暂未在代码中 dispatch，当前不会触发。后续版本将启用。
 ```
 
-> ⚠️ 此钩子已在 loader.py 中定义映射（`"chat.pre_send" → "on_chat_pre_send"`），但尚未在 conversations.py 中 dispatch，当前不会触发。后续版本将启用。
+- [ ] **Step 3: 查阅源码确认路由注册模式**
 
----
+阅读 `test_expand/dashboard/backend.py` 中 `register_api_routes` 的实现。
 
+- [ ] **Step 4: 撰写 2.3.2 自定义 API 路由**
+
+```markdown
 #### 2.3.2 自定义 API 路由
 
 在 manifest 中声明 `ext_points.backend: ["api_route"]`，实现 `register_api_routes(app)`：
 
-```python
+\`\`\`python
 # backend.py
 import re
 from flask import request, jsonify
@@ -659,7 +628,7 @@ def register_api_routes(app):
 
         _write_metrics(conv_id, body.get("data", {}))
         return jsonify({"code": 0})
-```
+\`\`\`
 
 **路由注册四要诀：**
 
@@ -669,16 +638,17 @@ def register_api_routes(app):
 | **校验动态参数** | 所有来自 URL 或请求体的参数，必须用正则白名单校验 | 直接 `open(path + conv_id)` |
 | **统一响应格式** | 成功 `{"code": 0, "data": ...}`，失败 `{"code": 非0, "message": "..."}` | 直接 return dict |
 | **异常兜底** | JSON 解析和文件读写必须 try/except（见 2.3.3） | 裸 `json.load()` |
+\`\`\`
+```
 
-> 完整示例参考：`test_expand/dashboard/backend.py` 的 `register_api_routes()` 函数。
+- [ ] **Step 5: 撰写 2.3.3 数据持久化**
 
----
-
+```markdown
 #### 2.3.3 数据持久化
 
 扩展有自己的存储目录：`user_data/ext_data/<ext_id>/`。以下是推荐的数据读写封装：
 
-```python
+\`\`\`python
 import json
 import os
 import threading
@@ -714,12 +684,16 @@ def _write_json(ext_id, filename, data):
     with _lock:
         with open(path, "w", encoding="utf-8") as f:
             json.dump(data, f, ensure_ascii=False, indent=2)
-```
+\`\`\`
 
 **文件命名建议：** 以会话 ID 为文件名，如 `<conv_id>_stats.json`，便于按会话隔离数据。
+```
 
----
+- [ ] **Step 6: 撰写 2.3.4 后端 API 参考**
 
+查阅 `backend/app/storage.py` 确认准确的函数签名后写入：
+
+```markdown
 #### 2.3.4 后端 API 参考
 
 扩展的 backend.py 中可直接 import 以下应用内部函数：
@@ -727,25 +701,56 @@ def _write_json(ext_id, filename, data):
 | 函数 | 来源 | 签名 | 用途 |
 |------|------|------|------|
 | `get_conversation(conv_id)` | `app.storage` | `str -> dict \| None` | 读取会话元数据（标题、创建时间等） |
-| `list_conversations()` | `app.storage` | `() -> list[dict]` | 列出所有会话 |
 | `get_messages(conv_id)` | `app.storage` | `str -> list[dict]` | 读取会话的完整消息列表 |
+| `get_all_settings()` | `app.storage` | `() -> list[dict]` | 读取所有预设配置列表 |
 | `get_setting(preset_id)` | `app.storage` | `str -> dict \| None` | 读取单个预设配置 |
-| `list_settings_raw()` | `app.storage` | `() -> list[dict]` | 列出所有预设配置 |
+| `save_setting(preset_id, data)` | `app.storage` | `(str, dict) -> None` | 保存预设配置 |
 
-```python
+\`\`\`python
 # 用法示例
 from app.storage import get_messages, get_conversation
 
 def on_chat_post_receive(ctx):
-    conv = get_conversation(ctx.get("conversation_id"))
-    msgs = get_messages(ctx.get("conversation_id"))
+    conv = get_conversation(ctx["conv_id"])
+    msgs = get_messages(ctx["conv_id"])
     # ...
-```
+\`\`\`
 
 > 前端 Store 访问请参见 2.4.3 useExtensionApi。
+```
+
+- [ ] **Step 7: 验证 2.3 节**
+
+确认：ctx 结构与 conversations.py 中构造一致、路由注册模式与 dashboard/backend.py 一致、storage.py 函数签名准确。
+
+- [ ] **Step 8: Commit Part 2.3**
+
+\`\`\`bash
+git add Plugin_Development_Guide.md
+git commit -m "docs: add Part 2.3 — backend development (hooks, routes, persistence, API ref)"
+\`\`\`
 
 ---
 
+### Task 4: 撰写 Part 2.4 — 前端开发（约 500 行）
+
+**Files:**
+- Modify: `Plugin_Development_Guide.md`（追加 2.4 节）
+
+**Interfaces:**
+- Consumes: Part 1 中的 __EXT_VUE__ 概念，2.2 中的前端扩展点
+- Produces: 2.4.1 ~ 2.4.5 节
+
+- [ ] **Step 1: 查阅源码确认前端 API**
+
+阅读以下文件确认准确 API：
+- `frontend/src/main.js` — __EXT_VUE__ 注入的具体 API 列表
+- `frontend/src/extensions/useExtensionApi.js` — 所有方法签名和返回值
+- `frontend/src/extensions/ExtensionSlot.vue` — 组件加载和 props 传递
+
+- [ ] **Step 2: 撰写 2.4.1 技术栈说明**
+
+```markdown
 ### 2.4 前端开发
 
 #### 2.4.1 技术栈说明
@@ -762,8 +767,8 @@ def on_chat_post_receive(ctx):
 
 **`window.__EXT_VUE__` 包含的 API：**
 
-```javascript
-// 由 frontend/src/main.js 在应用启动时注入
+\`\`\`javascript
+// 由 main.js 在应用启动时注入
 window.__EXT_VUE__ = {
   h,                // Vue 渲染函数
   ref,              // 响应式引用
@@ -772,21 +777,23 @@ window.__EXT_VUE__ = {
   onMounted,        // 挂载钩子
   onBeforeUnmount   // 卸载前钩子
 };
-```
+\`\`\`
 
 **为什么用 h() 函数而不是 .vue SFC？**
 
 扩展组件以纯 `.js` 文件运行，不经过 Vite 编译。`h()` 函数是 Vue 3 的底层渲染 API，可以在运行时直接创建组件，无需编译步骤。
 
-**参考模板：** `test_expand/dashboard/frontend/components/DashboardFloating.js` — 一个完整的可拖动悬浮面板示例。
+**参考模板：** `test_expand/dashboard/frontend/components/DashboardFloating.js`
+```
 
----
+- [ ] **Step 3: 撰写 2.4.2 组件注册机制**
 
+```markdown
 #### 2.4.2 组件注册机制
 
 扩展组件通过写入全局注册表来声明自己的存在：
 
-```
+\`\`\`
 扩展 JS 文件执行（由 ExtensionSlot 以 <script> 注入）
   └→ 写入 window.__EXTENSION_REGISTRY__["<ext_id>"] = {
        "panel": [ComponentA, ComponentB],
@@ -794,36 +801,30 @@ window.__EXT_VUE__ = {
      }
   └→ ExtensionSlot 读取匹配当前 slot name 的组件列表
        └→ markRaw(comp) — 防止 Vue 深度反应化破坏组件闭包
-       └→ shallowRef([]) — 浅层引用，只追踪数组本身的变化
+       └→ shallowRef 推入 — 浅层引用，只追踪数组本身的变化
        └→ <component :is="comp" :api="createExtensionApi()" />
-```
+\`\`\`
 
 **完整 index.js 模板：**
 
-```javascript
+\`\`\`javascript
 // frontend/index.js
 (function() {
-  // 在 setup() 内实时读取 API（而非 IIFE 顶层闭包）
   const V = window.__EXT_VUE__;
   if (!V || typeof V.ref !== 'function') {
     console.error('[my-extension] window.__EXT_VUE__ 不可用');
     return;
   }
+  const { h, ref, computed, watch, onMounted, onBeforeUnmount } = V;
 
   const MyPanel = {
     props: ['api'],
     setup(props) {
-      const { h, ref, onMounted } = window.__EXT_VUE__;
-
       // 从 props.api 获取应用状态
       const conv = props.api.getCurrentConversation();
       const messages = props.api.getMessages();
 
       const count = ref(0);
-
-      onMounted(() => {
-        console.log('[my-extension] 面板已挂载, 会话:', conv?.id);
-      });
 
       return () => h('div', { class: 'ext-my-panel' }, [
         h('h3', `当前会话: ${conv?.id || '无'}`),
@@ -840,7 +841,7 @@ window.__EXT_VUE__ = {
   };
   window.__EXTENSION_REGISTRY__ = REG;
 })();
-```
+\`\`\`
 
 **关键约定：**
 
@@ -850,31 +851,30 @@ window.__EXT_VUE__ = {
 | ID 一致性 | `REG['my-extension']` 的 key 必须与 `manifest.json` 的 `id` 一致 |
 | slot 名匹配 | `panel` / `message_decorator` 对应 `ext_points.frontend` 中声明的扩展点 |
 | props.api | ExtensionSlot 自动传入，无需手动绑定 |
-| setup() 内实时读取 | 在 `setup()` 中从 `window.__EXT_VUE__` 读取 API（非 IIFE 顶层闭包），见第三部分 3.2.4 的详细说明 |
+| setup() 内实时读取 | 在 `setup()` 中从 `window.__EXT_VUE__` 读取 API（非 IIFE 顶层闭包），参见第三部分注意事项 |
+```
 
----
+- [ ] **Step 4: 撰写 2.4.3 useExtensionApi**
 
+```markdown
 #### 2.4.3 useExtensionApi — 扩展安全 API
 
 扩展通过 `props.api` 访问应用状态，而非直接 import Pinia Store。这提供了安全层——扩展只能调用明确暴露的方法。
 
 | 方法 | 返回值 | 说明 |
 |------|--------|------|
-| `getConversation(convId)` | `Conversation \| null` | 根据会话 ID 查找完整会话对象 |
+| `getConversation(convId)` | `{ id, title, ... } \| null` | 根据会话 ID 查找会话 |
 | `getCurrentConversation()` | `{ id } \| null` | 获取当前活跃会话（只有 id 可用） |
-| `getMessages(convId?)` | `Message[]` | 不传参返回当前会话消息列表；传 convId 返回指定会话的消息 |
-| `getSettings()` | `Settings \| null` | 获取当前激活的预设配置 |
-| `getWorldInfo()` | `[]` | 预留接口，MVP 阶段返回空数组 |
+| `getMessages()` | `Message[]` | 获取当前会话的消息列表 |
+| `getSettings()` | `Settings` | 获取当前预设配置 |
+| `getWorldInfo()` | — | 预留接口 |
 
 **使用示例：**
 
-```javascript
+\`\`\`javascript
 setup(props) {
-  const { h, ref, onMounted } = window.__EXT_VUE__;
-
   const conv = props.api.getCurrentConversation();
   const messages = props.api.getMessages();
-  const settings = props.api.getSettings();
 
   // 用 conv.id 调用自己的后端 API
   async function fetchMyData() {
@@ -886,12 +886,14 @@ setup(props) {
 
   return () => h('div', ...);
 }
+\`\`\`
+
+> ⚠️ `getCurrentConversation()` 返回的是 `{ id }` 而非完整的 conversation 对象。需要其他字段时用 `getConversation(convId)`。
 ```
 
-> ⚠️ `getCurrentConversation()` 返回的是 `{ id }` 而非完整的 conversation 对象。需要标题、创建时间等字段时用 `getConversation(convId)`。
+- [ ] **Step 5: 撰写 2.4.4 前端扩展点 + 2.4.5 CSS 样式**
 
----
-
+```markdown
 #### 2.4.4 前端扩展点
 
 | 扩展点 | 插槽名 | App.vue 中的位置 | 用途 |
@@ -899,17 +901,15 @@ setup(props) {
 | `panel` | `"panel"` | 聊天界面全局区域 | 全局面板，适合悬浮窗、侧边栏等常驻 UI |
 | `message_decorator` | `"message_decorator"` | 每条消息下方（预留） | 为消息添加操作按钮、标注等 |
 
-> 要让扩展面板可见，`App.vue` 中必须有对应的 `<ExtensionSlot name="panel" />`，并在 `<script setup>` 中 `import ExtensionSlot`——漏掉 import 不会报错，但所有扩展面板会静默消失。
-
----
+> 要让扩展面板可见，`App.vue` 中必须有对应的 `<ExtensionSlot name="panel" />`。如果面板不显示，首先检查 App.vue 是否 import 了 ExtensionSlot 组件。
 
 #### 2.4.5 CSS 样式最佳实践
 
-由于扩展组件不经过构建工具，CSS 有以下两种推荐方式：
+由于扩展组件不经过构建工具，CSS 使用有以下方式：
 
 **方式 1：内联 `style` 对象（推荐用于简单样式）**
 
-```javascript
+\`\`\`javascript
 h('div', {
   style: {
     padding: '12px',
@@ -918,26 +918,25 @@ h('div', {
     boxShadow: '0 2px 8px rgba(0,0,0,0.1)'
   }
 }, [...])
-```
+\`\`\`
 
 **方式 2：注入 `<style>` 标签（推荐用于复杂样式）**
 
-```javascript
+\`\`\`javascript
 (function() {
-  // 注入样式（利用 id 防止重复注入）
+  // 注入样式（只执行一次）
   if (!document.getElementById('ext-my-styles')) {
     const style = document.createElement('style');
     style.id = 'ext-my-styles';
     style.textContent = `
       .ext-my-panel { padding: 12px; background: #fff; }
       .ext-my-button { padding: 4px 12px; cursor: pointer; }
-      .ext-my-button:hover { opacity: 0.8; }
     `;
     document.head.appendChild(style);
   }
   // ...组件定义
 })();
-```
+\`\`\`
 
 **命名规范：**
 
@@ -946,14 +945,41 @@ h('div', {
 | 所有类名加 `ext-<id>-` 前缀 | `.ext-dashboard-panel` |
 | 避免使用全局 CSS 变量 | 除非应用明确提供了稳定的主题变量表 |
 | 不依赖外部 CSS 框架 | 除非扩展明确声明依赖 |
+```
+
+- [ ] **Step 6: 验证 2.4 节**
+
+对照以下文件确认 API 和方法签名：
+- `frontend/src/main.js` — __EXT_VUE__ 注入列表
+- `frontend/src/extensions/useExtensionApi.js` — 所有方法
+- `frontend/src/extensions/ExtensionSlot.vue` — props 传递
+
+- [ ] **Step 7: Commit Part 2.4**
+
+\`\`\`bash
+git add Plugin_Development_Guide.md
+git commit -m "docs: add Part 2.4 — frontend development (tech stack, registration, API, styling)"
+\`\`\`
 
 ---
 
+### Task 5: 撰写 Part 2.5-2.6 — 安装分发 + 调试排查（约 300 行）
+
+**Files:**
+- Modify: `Plugin_Development_Guide.md`（追加 2.5 和 2.6 节）
+
+**Interfaces:**
+- Consumes: 2.2 中的权限列表，1.3 中的目录结构
+- Produces: 2.5.1 ~ 2.5.3（安装分发），2.6（调试排查）
+
+- [ ] **Step 1: 撰写 2.5 安装与分发**
+
+```markdown
 ### 2.5 安装与分发
 
 #### 2.5.1 ZIP 打包规范
 
-```
+\`\`\`
 my-extension.zip
 └── my-extension/              ← 必须有一层目录包裹（目录名 = 扩展 id）
     ├── manifest.json
@@ -962,34 +988,34 @@ my-extension.zip
         ├── index.js
         └── components/
             └── *.js
-```
+\`\`\`
 
 打包命令：
 
-```bash
+\`\`\`bash
 # Windows PowerShell
 Compress-Archive -Path test_expand/my-extension/* -DestinationPath my-extension.zip
 
 # macOS / Linux（注意进入目录打包，保证内部有一层包裹）
 cd test_expand
 zip -r ../../my-extension.zip my-extension/
-```
+\`\`\`
 
 #### 2.5.2 Git 仓库发布
 
 - 仓库根目录直接放 `manifest.json`、`backend.py`、`frontend/`
-- **不要额外嵌套**（不要 `repo/my-extension/manifest.json` 这样的结构）
+- **不要额外嵌套**（不要 `repo/my-extension/manifest.json`）
 - 建议写 README.md 说明功能和用法
 - 建议打 Git tag 标记版本号（如 `v1.0.0`）
 
-```bash
+\`\`\`bash
 git tag v1.0.0
 git push origin v1.0.0
-```
+\`\`\`
 
 #### 2.5.3 安装流程与权限审批
 
-```
+\`\`\`
 用户在扩展管理面板操作
   ├→ "从 ZIP 安装" → 选择 .zip 文件
   │    └→ 后端解压 → 校验 manifest → 返回所需权限列表
@@ -1000,12 +1026,14 @@ git push origin v1.0.0
   └→ 加载扩展
        ├→ 前端扩展：立即生效（刷新页面即可）
        └→ api_route 扩展：需重启应用生效（路由在 Flask 启动时注册）
+\`\`\`
+
+> ⚠️ **api_route 启动限制：** 通过 ZIP/Git 安装的扩展，如果在运行中，`api_bp=None`，自定义路由不会生效。需要重启应用使路由注册到 Blueprint。
 ```
 
-> ⚠️ **api_route 启动限制：** 通过 ZIP/Git 在运行中安装的扩展，`api_bp` 为 `None`，自定义路由不会立即生效。需要重启应用使路由注册到 Blueprint。
+- [ ] **Step 2: 撰写 2.6 调试与排查**
 
----
-
+```markdown
 ### 2.6 调试与排查
 
 #### 前端调试
@@ -1013,7 +1041,7 @@ git push origin v1.0.0
 | 现象 | 检查点 |
 |------|--------|
 | 扩展完全不显示 | ① `App.vue` 是否 `import ExtensionSlot`；② `.registry.json` 中 `enabled: true`；③ Network 面板 `/api/extensions/<id>/frontend` 是否 200 |
-| `ref is not a function` | ① `window.__EXT_VUE__` 是否被 Vue 内部覆盖（检查是否误用了 `__VUE__`）；② ExtensionSlot 是否使用了 `shallowRef` + `markRaw` |
+| `ref is not a function` | ① `window.__EXT_VUE__` 是否被覆盖（检查是否误用了 `__VUE__`）；② ExtensionSlot 是否使用了 `shallowRef` + `markRaw` |
 | 面板渲染但数据不更新 | ① `props.api.getCurrentConversation()` 是否返回正确的 `id`；② 加 `console.log` 诊断 `setup()` 中的 ref 值 |
 | 脚本未执行 | Network 面板检查 `/api/extensions/<id>/frontend` 是否 200；Console 是否有 JS 错误 |
 | 组件注册了但没渲染 | 检查 `window.__EXTENSION_REGISTRY__[id][slotname]` 是否存在；slot 名是否与 manifest 中声明的一致 |
@@ -1023,233 +1051,229 @@ git push origin v1.0.0
 | 现象 | 检查点 |
 |------|--------|
 | `/api/ext/...` 返回 404 | ① `ExtensionManager.init()` 是否传了 `api_bp` 而非 `flask_app`；② 路由路径是否多加了 `/api` 前缀 |
-| 钩子不触发 | ① `manifest.json` 中 `ext_points.backend` 是否包含对应扩展点；② 函数名是否与 `EXT_POINT_TO_FUNC` 映射一致（`chat.post_receive` → `on_chat_post_receive`） |
+| 钩子不触发 | ① `manifest.json` 中 `ext_points.backend` 是否包含对应扩展点；② 函数名是否与 `EXT_POINT_TO_FUNC` 映射一致 |
 | 数据写入失败 | ① 存储目录是否存在；② `os.makedirs(exist_ok=True)` 是否调用；③ 是否有文件权限问题 |
 
 #### 通用诊断命令
 
-```bash
+\`\`\`bash
 # 查看注册表
 cat user_data/extensions/.registry.json
 
 # 确认扩展目录结构
 ls -R user_data/extensions/<ext_id>/
 
-# 查看后端日志中的扩展加载信息（搜索 "加载扩展" 或 "扩展初始化" 日志行）
+# 查看后端日志中的扩展加载信息
+# 搜索 "扩展初始化完成" 或 "加载扩展" 日志行
+\`\`\`
 ```
 
+- [ ] **Step 3: 验证 2.5-2.6 节**
+
+确认安装流程与 `backend/app/routes/extensions.py` 和 `frontend/src/components/ExtensionManager.vue` 一致。
+
+- [ ] **Step 4: Commit Part 2.5-2.6**
+
+\`\`\`bash
+git add Plugin_Development_Guide.md
+git commit -m "docs: add Part 2.5-2.6 — distribution, installation, and debugging"
+\`\`\`
+
+---
+
+### Task 6: 整合 Part 3 — 保留原有注意事项（约 250 行）
+
+**Files:**
+- Modify: `Plugin_Development_Guide.md`（追加第三部分）
+
+**Interfaces:**
+- Consumes: 原 `Plugin_Development_Guide.md` 的全部内容
+- Produces: 第三部分，精简整合的注意事项
+
+- [ ] **Step 1: 提取原文档内容并去重**
+
+扫描原文档，标记与 Part 1 / Part 2 重复的内容：
+
+| 原文档节 | 处理方式 |
+|----------|----------|
+| §1 目录结构与同步 | 保留，与 1.3 互补（1.3 讲"是什么"，这里讲"怎么小心"） |
+| §2.1 必须 import ExtensionSlot | 保留，强调原因 |
+| §2.2 __VUE__ vs __EXT_VUE__ | 保留，经典踩坑 |
+| §2.3 markRaw + shallowRef | 保留，解释为什么 |
+| §2.4 setup() 内实时读取 | 保留 |
+| §3.1 init() 必须传 Blueprint | 保留 |
+| §3.2 路由不加 /api 前缀 | 保留 |
+| §3.3 安全校验 | 保留 |
+| §3.4 JSON 异常处理 | 保留 |
+| §4.1 Store 属性名 | 保留 |
+| §5 manifest.json 规范 | **与 2.2 重复，改写为"常见错误"视角** |
+| §6 调试技巧 | **与 2.6 重复，改写为速查清单** |
+| §7 排查清单 | **保留为终极速查表** |
+
+- [ ] **Step 2: 撰写第三部分**
+
+```markdown
 ---
 
 ## 第三部分：开发注意事项
 
-> 以下内容基于 Dashboard 扩展的实际调试经验。**正文教你"怎么做"，这里告诉你"为什么容易出错"。** 开发新扩展前务必逐项阅读。
+> 以下内容基于 Dashboard 扩展的实际调试经验。**正文教你"怎么做"，这里告诉你"为什么容易出错"。** 开发新扩展前务必阅读。
 
 ### 3.1 目录结构与同步
 
-```
-chat/
-├── test_expand/                    ← 📝 开发工作目录（源码）
-│   └── <extension_id>/
-│       ├── manifest.json
-│       ├── backend.py
-│       └── frontend/
-│           ├── index.js
-│           └── components/
-│               └── *.js
-│
-├── user_data/extensions/           ← 🏃 运行时目录（实际加载）
-│   ├── .registry.json
-│   └── <extension_id>/
-│       └── ...（与 test_expand 结构相同）
-```
-
-| 规则 | 说明 |
-|------|------|
-| `test_expand/` 是开发目录 | 修改都在这里进行 |
-| `user_data/extensions/` 是运行时 | Flask 和前端只从这里加载扩展 |
-| **两个目录各自独立** | 修改 `test_expand/` 后必须手动同步到 `user_data/` |
-| `.registry.json` 驱动加载 | `enabled: true` 才会被 `load_all_enabled()` 加载 |
-| 安装方式 | ZIP 安装 / Git 克隆后调用 `add_extension()` 写入注册表 |
+（保留原 §1，略作精简）
 
 ### 3.2 前端开发避坑
 
 #### 3.2.1 必须 import ExtensionSlot
 
-`App.vue` 中使用 `<ExtensionSlot name="panel" />` 等入口时，必须在 `<script setup>` 中显式 import：
-
-```javascript
-// App.vue — 容易遗漏！
-import ExtensionSlot from "@/extensions/ExtensionSlot.vue";
-```
-
-> **教训**：Vue 3 `<script setup>` 不 import 的组件**不会渲染也不报错**，导致所有扩展面板静默消失。
+（保留原 §2.1）
 
 #### 3.2.2 永远不要用 `__VUE__`，用 `__EXT_VUE__`
 
-```javascript
-// ❌ 错误 — main.js 中
-window.__VUE__ = { h, ref, computed, watch, onMounted, onBeforeUnmount };
-
-// ✅ 正确
-window.__EXT_VUE__ = { h, ref, computed, watch, onMounted, onBeforeUnmount };
-```
-
-> **根因**：Vue 渲染器 `baseCreateRenderer()` 执行 `target.__VUE__ = true`（`vue.esm-browser.js:7766`），会**覆盖**你设置的 API 对象。`__VUE__` 是 Vue 内部保留属性，**绝对不能使用**。
+（保留原 §2.2）
 
 #### 3.2.3 组件对象必须 markRaw + shallowRef
 
-ExtensionSlot 加载组件时，**禁止**将组件定义对象推入 `ref([])`（会被深度反应化，破坏 `setup()` 闭包）：
-
-```javascript
-// ❌ 错误 — ExtensionSlot.vue
-import { ref } from 'vue';
-const components = ref([]);  // 深度反应化！
-
-// ✅ 正确
-import { shallowRef, markRaw } from 'vue';
-const components = shallowRef([]);  // 浅层引用
-
-// 注册组件时显式标记
-components.value = result.map(item => ({
-  ...item,
-  comp: markRaw(item.comp),  // 组件定义对象永不反应化
-}));
-```
-
-> **现象**：不这样做会报 `TypeError: ref is not a function`（Vue Proxy 干扰了闭包变量），以及 Vue 警告 "Component that was made a reactive object"。
+（保留原 §2.3）
 
 #### 3.2.4 setup() 内实时读取 window.__EXT_VUE__
 
-不要在 IIFE 顶层解构后靠闭包传递，改为在 `setup()` 内实时读取：
-
-```javascript
-// ✅ 推荐 — 每次 setup() 调用时从 window.__EXT_VUE__ 实时读取
-setup(props) {
-  const V = window.__EXT_VUE__;
-  if (!V || typeof V.ref !== 'function') {
-    console.error('[扩展名] window.__EXT_VUE__ 异常:', V);
-    return () => null;  // 降级：渲染空节点
-  }
-  const { h, ref, computed, watch, onMounted, onBeforeUnmount } = V;
-  // ...
-}
-```
-
-> **原因**：HMR、Electron contextIsolation 等场景下，IIFE 执行时的 `window` 状态可能与 `setup()` 执行时不一致。
+（保留原 §2.4）
 
 ### 3.3 后端开发避坑
 
 #### 3.3.1 init() 传 Blueprint，不是 Flask app
 
-```python
-# backend/app/__init__.py
-
-# ❌ 错误
-get_extension_manager().init(api_bp=flask_app)
-
-# ✅ 正确
-get_extension_manager().init(api_bp=api_bp)
-```
-
-> **根因**：`flask_app` 是 Flask 实例，`api_bp` 是 `Blueprint("api", url_prefix="/api")`。传错后扩展的 `register_api_routes(api_bp)` 会把路由注册到 Flask app 上而非 Blueprint，导致 `/api/ext/...` 请求无法匹配 → 404。
+（保留原 §3.1）
 
 #### 3.3.2 扩展路由不加 /api 前缀
 
-```python
-# backend.py
-
-# ❌ 错误 — Blueprint 已有 /api 前缀
-@app.route("/api/ext/dashboard/<conv_id>/metrics")
-
-# ✅ 正确 — 路由相对于 Blueprint
-@app.route("/ext/dashboard/<conv_id>/metrics")
-```
-
-> 因为 `api_bp` 注册时带有 `url_prefix="/api"`，路由路径会自动拼接。
+（保留原 §3.2）
 
 #### 3.3.3 安全：校验动态路径参数
 
-```python
-import re
-
-_CONV_ID_PATTERN = re.compile(r'^[a-zA-Z0-9_\-]{1,64}$')
-
-def _validate_conv_id(conv_id):
-    return bool(_CONV_ID_PATTERN.match(conv_id))
-
-@app.route("/ext/dashboard/<conv_id>/metrics")
-def dashboard_metrics(conv_id):
-    if not _validate_conv_id(conv_id):
-        return jsonify({"code": 400, "message": "invalid id"}), 400
-    # ...
-```
+（保留原 §3.3）
 
 #### 3.3.4 JSON 文件读写加异常处理
 
-```python
-def _read_metrics(conv_id):
-    try:
-        with open(path, "r", encoding="utf-8") as f:
-            return json.load(f)
-    except (json.JSONDecodeError, IOError):
-        return default_value  # 文件损坏不导致 500
-```
+（保留原 §3.4）
 
 ### 3.4 useExtensionApi 注意事项
 
-```javascript
-// ❌ 错误 — chat store 没有 activeConversation 属性
-getCurrentConversation() {
-  return chatStore.activeConversation;  // undefined！
-}
-
-// ✅ 正确 — 用 activeConvId
-getCurrentConversation() {
-  if (!chatStore.activeConvId) return null;
-  return { id: chatStore.activeConvId };
-}
-
-// ❌ 错误 — 同上
-getMessages() {
-  return chatStore.activeConversation?.messages || [];
-}
-
-// ✅ 正确 — chat store 直接暴露 messages
-getMessages() {
-  return chatStore.messages;
-}
-```
-
-> **教训**：添加新 API 方法前，先确认 Pinia Store 的实际 state/getter 属性名。`activeConvId` ≠ `activeConversation`。
+（保留原 §4.1，属性名对照）
 
 ### 3.5 manifest.json 常见错误
 
-| 错误 | 后果 | 正确做法 |
-|------|------|----------|
-| `id` 与目录名不一致 | 加载失败 | 确保 manifest 中 `"id"` 与文件夹名完全相同 |
-| 权限不在 `VALID_PERMISSIONS` 中 | 安装时校验不通过 | 只使用 `permissions.py` 中定义的 6 种权限 |
-| `ext_points` 中声明了未实现的扩展点 | 加载时报错 | 声明 `api_route` 就必须实现 `register_api_routes()` |
-| `permissions_granted` 不匹配 | 安装失败 | `.registry.json` 中的 `permissions_granted` 必须覆盖 manifest 中声明的所有权限 |
-| `features[].id` 包含特殊字符 | PUT settings 时报 400 | 只使用字母数字下划线连字符 |
-| `features[].default` 为非 boolean | PUT settings 时报 400 | `default` 必须是 `true` 或 `false` |
-| group 的 `children` 内使用 `type: "group"` | 加载时忽略嵌套 group | 仅一级嵌套，子功能为叶子 |
-| settings 中 `模块id.子功能id` 键不存在 | 按 default 生成 | 确保 manifest 声明了对应的 children |
+（原 §5 改写为常见错误视角，与 2.2 互补而非重复）
 
 ### 3.6 常见错误排查清单
 
-在提交扩展前，逐项确认：
+（保留原 §7 作为终极速查表）
+```
 
-- [ ] `manifest.json` 中 `id` 与目录名一致
-- [ ] `.registry.json` 中 `enabled: true` 且 `permissions_granted` 匹配
-- [ ] `manifest.json` 中 `features` 的 `default` 值均为 boolean
-- [ ] `test_expand/` 修改已同步到 `user_data/extensions/`
-- [ ] 前端：`window.__EXT_VUE__`（不是 `__VUE__`）
-- [ ] 前端：`App.vue` 已 import `ExtensionSlot`
-- [ ] 前端：`ExtensionSlot` 使用 `shallowRef` + `markRaw`
-- [ ] 前端：`setup()` 中实时读取 `window.__EXT_VUE__`（非 IIFE 闭包）
-- [ ] 前端：`useExtensionApi` 中属性名与 Store 实际字段一致
-- [ ] 后端：`init(api_bp=api_bp)`（不是 `flask_app`）
-- [ ] 后端：扩展路由不加 `/api` 前缀
-- [ ] 后端：动态路径参数有白名单校验
-- [ ] 后端：JSON 文件读写有 `try/except`
-- [ ] 后端：使用正确的 ctx 字段名（`conversation_id`，不是 `conv_id`）
+- [ ] **Step 3: 实际整合原文档内容**
+
+逐节提取原文档内容，精简冗余表述，保留核心教训和代码示例。注意：
+- 去重已在 Part 1/2 详细讲解的内容
+- 保留"教训"、"根因"、"现象" 等实践性表述
+- 代码示例保留正确/错误对照
+
+- [ ] **Step 4: 验证 Part 3**
+
+确认原文档所有检查项都被保留（无丢失），与 Part 1/2 无明显重复。
+
+- [ ] **Step 5: Commit Part 3**
+
+\`\`\`bash
+git add Plugin_Development_Guide.md
+git commit -m "docs: add Part 3 — development notes and pitfalls from original guide"
+\`\`\`
+
+---
+
+### Task 7: 最终审查与润色
+
+**Files:**
+- Modify: `Plugin_Development_Guide.md`（全文件审查）
+
+- [ ] **Step 1: 全文通读**
+
+从头到尾通读一遍，检查：
+- 术语一致性（如 extension/扩展/插件 统一使用）
+- 交叉引用正确（如 "参见 2.4.3" 确实指向那一节）
+- Markdown 格式无错误（表格对齐、代码块闭合）
+
+- [ ] **Step 2: 对照设计规格逐项确认**
+
+| 设计要求 | 完成情况 |
+|----------|----------|
+| Part 1: Quick Start + Hello World | 确认 |
+| Part 2.1: 架构总览 | 确认 |
+| Part 2.2: manifest.json 规范 | 确认 |
+| Part 2.3: 后端开发（钩子/路由/持久化/API参考） | 确认 |
+| Part 2.4: 前端开发（技术栈/注册/API/扩展点/CSS） | 确认 |
+| Part 2.5: 安装与分发 | 确认 |
+| Part 2.6: 调试与排查 | 确认 |
+| Part 3: 原注意事项保留 | 确认 |
+| 代码全部内嵌，无外部示例目录 | 确认 |
+| 文件路径与源码一致 | 确认 |
+
+- [ ] **Step 3: 行数检查**
+
+确认总行数在 1800-2500 范围内。
+
+- [ ] **Step 4: 最终 Commit**
+
+\`\`\`bash
+git add Plugin_Development_Guide.md
+git commit -m "docs: finalize Plugin Development Guide — three-part hybrid document"
+\`\`\`
+```
+
+---
+
+## Self-Review
+
+### 1. Spec coverage
+
+逐个检查设计规格的章节是否都有对应任务：
+
+| 规格章节 | 对应任务 |
+|----------|----------|
+| Part 1: 1.1 What | Task 1 Step 1 |
+| Part 1: 1.2 Hello World | Task 1 Step 3 |
+| Part 1: 1.3 目录结构 | Task 1 Step 5 |
+| Part 2: 2.1 架构总览 | Task 2 Step 1 |
+| Part 2: 2.2 manifest 规范 | Task 2 Step 3 |
+| Part 2: 2.3.1 钩子 | Task 3 Step 2 |
+| Part 2: 2.3.2 自定义路由 | Task 3 Step 4 |
+| Part 2: 2.3.3 数据持久化 | Task 3 Step 5 |
+| Part 2: 2.3.4 后端 API 参考 | Task 3 Step 6 |
+| Part 2: 2.4.1 技术栈 | Task 4 Step 2 |
+| Part 2: 2.4.2 注册机制 | Task 4 Step 3 |
+| Part 2: 2.4.3 useExtensionApi | Task 4 Step 4 |
+| Part 2: 2.4.4 扩展点 | Task 4 Step 5 |
+| Part 2: 2.4.5 CSS | Task 4 Step 5 |
+| Part 2: 2.5 安装分发 | Task 5 Step 1 |
+| Part 2: 2.6 调试排查 | Task 5 Step 2 |
+| Part 3: 注意事项 | Task 6 Step 2-3 |
+
+所有设计规格章节都有覆盖。✅
+
+### 2. Placeholder scan
+
+搜索 "TBD"、"TODO"、"fill in"、"类似" — 无占位符。所有步骤都包含具体内容或指向明确的源码文件。✅
+
+### 3. Type consistency
+
+- `__EXT_VUE__` API 列表在 Task 4 Step 2 定义，后续步骤使用一致
+- `props.api` 方法列表在 Task 4 Step 4 定义，与 useExtensionApi.js 一致
+- ctx 结构在 Task 3 Step 2 定义，与 conversations.py 一致
+- manifest 字段在 Task 2 Step 3 定义，后续任务引用一致 ✅
+
+### 4. Issues found
+
+- 无遗漏的规格需求
+- 无矛盾或类型不一致
+- 前方任务定义的术语在后续任务中使用一致

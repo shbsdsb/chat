@@ -49,6 +49,7 @@ import CssPresetSelector from "@/components/CssPresetSelector.vue";
 import CssPresetEditor from "@/components/CssPresetEditor.vue";
 import AlertDialog from "@/components/AlertDialog.vue";
 import ExtensionManager from "@/components/ExtensionManager.vue";
+import ExtensionSlot from "@/extensions/ExtensionSlot.vue";
 import { useChatStore } from "@/stores/chat";
 import { useParamPresetsStore } from "@/stores/paramPresets";
 import { useCssPresetsStore } from "@/stores/cssPresets";
