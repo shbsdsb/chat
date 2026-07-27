@@ -11,6 +11,8 @@ export const useSettingsStore = defineStore("settings", {
     model: "gpt-4o",
     responseFormat: "",
     availableModels: [],
+    autoConnect: false,
+    connectionStatus: "disconnected", // 'disconnected' | 'testing' | 'connected'
   }),
 
   actions: {
