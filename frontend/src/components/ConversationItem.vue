@@ -5,6 +5,7 @@
     @click="$emit('select')"
   >
     <span class="conv-title">{{ conversation.title }}</span>
+    <span class="conv-time">{{ formatTime(conversation.lastMessageAt) }}</span>
     <div class="conv-actions">
       <button class="conv-action-btn" title="编辑名称" @click.stop="startRename">
         <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
@@ -50,6 +51,19 @@
 import { ref, nextTick } from "vue";
 import { useChatStore } from "@/stores/chat";
 import BaseDialog from "@/components/BaseDialog.vue";
+
+function formatTime(ts) {
+  if (!ts) return "";
+  const d = new Date(ts);
+  const now = new Date();
+  const diffMs = now - d;
+  const diffMin = Math.floor(diffMs / 60000);
+  if (diffMin < 1) return "刚刚";
+  if (diffMin < 60) return `${diffMin}分钟前`;
+  const diffHour = Math.floor(diffMin / 60);
+  if (diffHour < 24) return `${diffHour}小时前`;
+  return d.toLocaleDateString("zh-CN", { month: "short", day: "numeric" });
+}
 
 const props = defineProps({
   conversation: { type: Object, required: true },
@@ -104,21 +118,35 @@ function cancelDelete() {
 <style scoped>
 .conv-item {
   padding: 8px 10px 8px 12px;
-  border-radius: 8px;
+  border-radius: var(--radius-md);
   cursor: pointer;
   font-size: 14px;
-  color: #333;
+  color: var(--text-primary);
   position: relative;
   display: flex;
   align-items: center;
   gap: 6px;
+  transition: background 0.15s ease;
+}
+.conv-item::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 6px;
+  bottom: 6px;
+  width: 3px;
+  border-radius: 0 3px 3px 0;
+  background: transparent;
+  transition: background 0.2s ease;
 }
 .conv-item:hover {
-  background: #e8e8e8;
+  background: rgba(0,0,0,0.03);
 }
 .conv-item.active {
-  background: #fff;
-  border: 1px solid #d5d5d5;
+  background: rgba(79,110,246,0.08);
+}
+.conv-item.active::before {
+  background: var(--accent);
 }
 
 .conv-title {
@@ -126,6 +154,14 @@ function cancelDelete() {
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  font-size: 14px;
+}
+
+.conv-time {
+  font-size: 12px;
+  color: var(--text-muted);
+  flex-shrink: 0;
+  margin-right: 2px;
 }
 
 .conv-actions {
@@ -143,9 +179,9 @@ function cancelDelete() {
   width: 26px;
   height: 26px;
   border: none;
-  border-radius: 4px;
+  border-radius: 6px;
   background: transparent;
-  color: #999;
+  color: var(--text-muted);
   cursor: pointer;
   display: flex;
   align-items: center;
@@ -154,11 +190,11 @@ function cancelDelete() {
   transition: background 0.12s, color 0.12s;
 }
 .conv-action-btn:hover {
-  background: #ddd;
-  color: #555;
+  background: rgba(0,0,0,0.06);
+  color: var(--text-primary);
 }
 .conv-action-delete:hover {
-  background: #fdd;
-  color: #d32f2f;
+  background: rgba(239,68,68,0.10);
+  color: var(--danger);
 }
 </style>
