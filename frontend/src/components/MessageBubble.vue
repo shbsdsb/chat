@@ -1,5 +1,5 @@
 <template>
-    <div class="bubble-row" :class="[message.role, { entering: isEntering }]">
+    <div class="bubble-row" :class="message.role">
         <!-- 角色标签 -->
         <span class="bubble-role-label">{{ message.role === 'user' ? '你' : 'Chat' }}</span>
 
