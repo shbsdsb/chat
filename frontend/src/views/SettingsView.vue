@@ -130,7 +130,7 @@ async function handleTestConnection() {
   background: var(--bg-primary);
   border: 1px solid var(--border);
   border-radius: var(--radius-lg);
-  box-shadow: var(--shadow-xs);
+  box-shadow: var(--shadow-sm);
   padding: 16px 18px;
   display: flex;
   flex-direction: column;
@@ -244,7 +244,7 @@ async function handleTestConnection() {
 .toggle-box {
   width: 18px;
   height: 18px;
-  border: 2px solid var(--border-light);
+  border: 2px solid var(--border);
   border-radius: 4px;
   display: flex;
   align-items: center;

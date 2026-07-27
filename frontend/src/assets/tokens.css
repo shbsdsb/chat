@@ -54,7 +54,7 @@
   --card-icon-color: var(--accent);
   --test-btn-bg: var(--accent);
   --test-btn-text: #fff;
-  --status-dot-disconnected: #ccc;
+  --status-dot-disconnected: #aaa;
   --status-dot-connected: #22c55e;
   --toggle-bg-off: #e2e4eb;
   --toggle-bg-on: var(--accent);
