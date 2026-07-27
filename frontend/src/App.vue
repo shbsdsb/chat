@@ -101,30 +101,7 @@ onMounted(() => {
   box-sizing: border-box;
 }
 
-:root {
-  --bg-primary: #fff;
-  --bg-secondary: #f8f9fb;
-  --bg-tertiary: #f0f1f5;
-  --text-primary: #1a1a2e;
-  --text-secondary: #5b5b7a;
-  --text-muted: #8e8ea0;
-  --border: #e2e4eb;
-  --border-light: #d8dae2;
-  --accent: #4f6ef6;
-  --accent-light: #6c8cfc;
-  --danger: #ef4444;
-  --shadow-xs: 0 1px 2px rgba(0,0,0,0.04);
-  --shadow-sm: 0 2px 8px rgba(0,0,0,0.06);
-  --shadow-md: 0 4px 16px rgba(0,0,0,0.08);
-  --shadow-lg: 0 8px 32px rgba(0,0,0,0.10);
-  --glass-bg: rgba(255,255,255,0.7);
-  --glass-border: rgba(0,0,0,0.06);
-  --glass-blur: 12px;
-  --radius-sm: 8px;
-  --radius-md: 10px;
-  --radius-lg: 16px;
-  --radius-xl: 28px;
-}
+@import "@/assets/tokens.css";
 
 html, body, #app {
   height: 100%;
