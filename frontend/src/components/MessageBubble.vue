@@ -13,6 +13,7 @@
         <div v-if="isCompleteHtml && blocks.length === 1" class="bubble bubble-html" style="width:100%;padding:0">
             <div v-if="message.role === 'assistant' && message.reasoning_content"
                  class="reasoning-block"
+                 :class="{ 'is-open': reasoningOpen }"
                  style="padding: 12px 16px 0;">
                 <div class="reasoning-header" @click="reasoningOpen = !reasoningOpen">
                     <span class="reasoning-icon">{{ reasoningOpen ? '▼' : '▶' }}</span>
@@ -35,7 +36,8 @@
             <!-- 正常显示模式 -->
             <template v-else>
                 <div v-if="message.role === 'assistant' && message.reasoning_content"
-                     class="reasoning-block">
+                     class="reasoning-block"
+                     :class="{ 'is-open': reasoningOpen }">
                     <div class="reasoning-header" @click="reasoningOpen = !reasoningOpen">
                         <span class="reasoning-icon">{{ reasoningOpen ? '▼' : '▶' }}</span>
                         <span>思考过程</span>
