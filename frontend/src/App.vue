@@ -174,12 +174,15 @@ html, body, #app {
 }
 
 .top-btn {
-  padding: 6px 14px;
+  width: 36px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   border: none;
   border-radius: var(--radius-sm);
   background: transparent;
   color: var(--text-secondary);
-  font-size: 13px;
   cursor: pointer;
   position: relative;
   transition: all 0.15s ease;
@@ -202,6 +205,13 @@ html, body, #app {
 }
 .top-btn:hover::after {
   width: 60%;
+}
+/* 激活态 */
+.top-btn.active {
+  color: var(--text-primary);
+}
+.top-btn.active::after {
+  width: 100%;
 }
 
 .app-body {
