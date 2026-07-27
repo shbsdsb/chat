@@ -82,16 +82,13 @@ echo Node:  %NODE_CMD%
 echo.
 
 echo [1/2] Starting Flask backend (port 5000) ...
-start "Chat-Backend" cmd /k "cd /d %ROOT%\backend && %PY_CMD% -m pip install -r requirements.txt -q && %PY_CMD% run.py"
+start "Chat-Backend" cmd /c "cd /d %ROOT%\backend && %PY_CMD% -m pip install -r requirements.txt -q && %PY_CMD% run.py"
 
 echo [2/2] Starting Electron app ...
-start "Chat-Frontend" cmd /k "cd /d %ROOT%\frontend && npm install && npm run electron:dev"
+start "Chat-Frontend" cmd /c "cd /d %ROOT%\frontend && npm install && npm run electron:dev"
 
 echo.
 echo ============================================
 echo   Backend : http://127.0.0.1:5000
 echo   Electron window will open automatically
 echo ============================================
-echo.
-echo Both windows are running. Close this window to exit.
-pause
