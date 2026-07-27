@@ -1,7 +1,7 @@
 # UI Token — 设计规范与组件约定
 
 > **目的**：统一 UI 设计语言，确保新组件适配自定义 CSS 系统。
-> **最后更新**：2026-07-24
+> **最后更新**：2026-07-27
 
 ---
 
@@ -12,29 +12,46 @@
 | Token | 值 | 用途 |
 |-------|-----|------|
 | `color-bg-primary` | `#fff` | 主背景（main-area, bubble, drawer-body） |
-| `color-bg-secondary` | `#fafafa` | 次背景（top-bar） |
-| `color-bg-tertiary` | `#f5f5f5` | 三级背景（左侧会话抽屉） |
-| `color-text-primary` | `#333` | 主文字 |
-| `color-text-secondary` | `#555` | 次文字（按钮、标签） |
-| `color-text-muted` | `#888` / `#999` | 弱化文字（占位符、辅助信息） |
-| `color-border` | `#e0e0e0` | 分割线、面板边框 |
-| `color-border-light` | `#d5d5d5` | 输入框/按钮边框 |
-| `color-accent` | `#4a90d9` | 强调色（保存按钮、focus 边框、链接） |
-| `color-danger` | `#e53935` | 危险操作（停止按钮、删除） |
+| `color-bg-secondary` | `#f8f9fb` | 次背景（top-bar） |
+| `color-bg-tertiary` | `#f0f1f5` | 三级背景（左侧会话抽屉） |
+| `color-text-primary` | `#1a1a2e` | 主文字 |
+| `color-text-secondary` | `#5b5b7a` | 次文字（按钮、标签） |
+| `color-text-muted` | `#8e8ea0` | 弱化文字（占位符、辅助信息） |
+| `color-border` | `#e2e4eb` | 分割线、面板边框 |
+| `color-border-light` | `#d8dae2` | 输入框/按钮边框 |
+| `color-accent` | `#4f6ef6` | 强调色（保存按钮、focus 边框、链接） |
+| `color-danger` | `#ef4444` | 危险操作（停止按钮、删除） |
 | `color-bg-edit` | `#1e1e1e` | 代码编辑器背景（CSS textarea, 代码块） |
 | `color-bg-edit-text` | `#d4d4d4` | 代码编辑器文字 |
 
-### 1.2 圆角
+### 1.2 阴影
 
 | Token | 值 | 用途 |
 |-------|-----|------|
-| `radius-sm` | `6px` | 按钮、标签、小输入框 |
-| `radius-md` | `8px` | 卡片、面板、会话项、预设选项 |
-| `radius-lg` | `12px` | 消息气泡 |
-| `radius-xl` | `24px` | 输入框 wrapper（圆形胶囊） |
+| `shadow-xs` | `0 1px 2px rgba(0,0,0,0.04)` | 面板轻微浮起 |
+| `shadow-sm` | `0 2px 8px rgba(0,0,0,0.06)` | 消息气泡 |
+| `shadow-md` | `0 4px 16px rgba(0,0,0,0.08)` | 抽屉面板、弹窗 |
+| `shadow-lg` | `0 8px 32px rgba(0,0,0,0.10)` | 模态弹窗 |
+
+### 1.3 圆角
+
+| Token | 值 | 用途 |
+|-------|-----|------|
+| `radius-sm` | `8px` | 按钮、标签、小输入框 |
+| `radius-md` | `10px` | 卡片、面板、会话项、预设选项 |
+| `radius-lg` | `16px` | 消息气泡 |
+| `radius-xl` | `28px` | 输入框 wrapper（圆形胶囊） |
 | `radius-full` | `50%` | 发送按钮（圆形） |
 
-### 1.3 间距
+### 1.4 玻璃态
+
+| Token | 值 | 用途 |
+|-------|-----|------|
+| `glass-bg` | `rgba(255,255,255,0.7)` | 玻璃态背景 |
+| `glass-border` | `rgba(0,0,0,0.06)` | 玻璃态边框 |
+| `glass-blur` | `12px` | 玻璃态模糊量 |
+
+### 1.5 间距
 
 | Token | 值 | 用途 |
 |-------|-----|------|
@@ -44,7 +61,7 @@
 | `spacing-lg` | `16px` | 抽屉标题内边距、组件间距 |
 | `spacing-xl` | `24px` | 抽屉 body 内边距、页面级 padding |
 
-### 1.4 动画
+### 1.6 动画
 
 | Token | 值 | 用途 |
 |-------|-----|------|
@@ -56,8 +73,14 @@
 | `title-fade-duration` | `0.15s` | 标题切换 |
 | `btn-hover-duration` | `0.15s` | 按钮 hover 过渡 |
 | `resizer-hover-duration` | `0.15s` | 拖拽条 hover |
+| `msg-enter-duration` | `0.25s` | 消息入场动画 |
+| `msg-enter-easing` | `ease-out` | 消息入场缓动 |
+| `cursor-blink-duration` | `0.8s` | 打字光标闪烁 |
+| `ripple-duration` | `0.5s` | 按钮涟漪 |
+| `pulse-duration` | `1.2s` | 停止按钮脉冲 |
+| `reasoning-collapse-duration` | `0.3s` | 推理块折叠 |
 
-### 1.5 字体
+### 1.7 字体
 
 | Token | 值 | 用途 |
 |-------|-----|------|
