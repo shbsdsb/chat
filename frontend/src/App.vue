@@ -2,14 +2,29 @@
   <div id="app" class="app-shell">
     <header class="top-bar">
       <div class="top-left">
-        <button class="top-btn" @click="showConversations = !showConversations">会话记录</button>
+        <button class="top-btn" :class="{ active: showConversations }"
+          @click="showConversations = !showConversations" title="会话记录">
+          <Sidebar :size="18" />
+        </button>
         <span class="top-title">Chat</span>
       </div>
       <nav class="top-nav">
-        <CssPresetSelector @open-drawer="toggleDrawer('css')" />
-        <button class="top-btn" @click="toggleDrawer('presets')">预设</button>
-        <button class="top-btn" @click="toggleDrawer('api')">API 设置</button>
-        <button class="top-btn" @click="toggleDrawer('extensions')">🧩 扩展</button>
+        <button class="top-btn" :class="{ active: activeDrawer === 'css' }"
+          @click="toggleDrawer('css')" title="CSS 预设">
+          <Palette :size="18" />
+        </button>
+        <button class="top-btn" :class="{ active: activeDrawer === 'presets' }"
+          @click="toggleDrawer('presets')" title="参数预设">
+          <SlidersHorizontal :size="18" />
+        </button>
+        <button class="top-btn" :class="{ active: activeDrawer === 'api' }"
+          @click="toggleDrawer('api')" title="API 设置">
+          <Plug :size="18" />
+        </button>
+        <button class="top-btn" :class="{ active: activeDrawer === 'extensions' }"
+          @click="toggleDrawer('extensions')" title="扩展管理">
+          <Blocks :size="18" />
+        </button>
       </nav>
     </header>
     <div class="app-body">
@@ -45,11 +60,11 @@ import ConversationsDrawer from "@/components/ConversationsDrawer.vue";
 import SettingsDrawer from "@/components/SettingsDrawer.vue";
 import SettingsView from "@/views/SettingsView.vue";
 import ParamPresetSelector from "@/components/ParamPresetSelector.vue";
-import CssPresetSelector from "@/components/CssPresetSelector.vue";
 import CssPresetEditor from "@/components/CssPresetEditor.vue";
 import AlertDialog from "@/components/AlertDialog.vue";
 import ExtensionManager from "@/components/ExtensionManager.vue";
 import ExtensionSlot from "@/extensions/ExtensionSlot.vue";
+import { Sidebar, Palette, SlidersHorizontal, Plug, Blocks } from "lucide-vue-next";
 import { useChatStore } from "@/stores/chat";
 import { useParamPresetsStore } from "@/stores/paramPresets";
 import { useCssPresetsStore } from "@/stores/cssPresets";
