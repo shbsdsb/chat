@@ -86,11 +86,36 @@ onMounted(() => {
   box-sizing: border-box;
 }
 
+:root {
+  --bg-primary: #fff;
+  --bg-secondary: #f8f9fb;
+  --bg-tertiary: #f0f1f5;
+  --text-primary: #1a1a2e;
+  --text-secondary: #5b5b7a;
+  --text-muted: #8e8ea0;
+  --border: #e2e4eb;
+  --border-light: #d8dae2;
+  --accent: #4f6ef6;
+  --accent-light: #6c8cfc;
+  --danger: #ef4444;
+  --shadow-xs: 0 1px 2px rgba(0,0,0,0.04);
+  --shadow-sm: 0 2px 8px rgba(0,0,0,0.06);
+  --shadow-md: 0 4px 16px rgba(0,0,0,0.08);
+  --shadow-lg: 0 8px 32px rgba(0,0,0,0.10);
+  --glass-bg: rgba(255,255,255,0.7);
+  --glass-border: rgba(0,0,0,0.06);
+  --glass-blur: 12px;
+  --radius-sm: 8px;
+  --radius-md: 10px;
+  --radius-lg: 16px;
+  --radius-xl: 28px;
+}
+
 html, body, #app {
   height: 100%;
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-  color: #333;
-  background: #fff;
+  color: var(--text-primary);
+  background: var(--bg-primary);
 }
 
 .app-shell {
@@ -103,41 +128,65 @@ html, body, #app {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  height: 44px;
-  padding: 0 16px;
-  background: #fafafa;
-  border-bottom: 1px solid #e0e0e0;
+  height: 48px;
+  padding: 0 20px;
+  background: var(--bg-secondary);
+  border-bottom: 1px solid var(--border);
+  box-shadow: var(--shadow-xs);
   flex-shrink: 0;
+  position: relative;
+  z-index: 10;
 }
 
 .top-left {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 12px;
 }
 
 .top-title {
-  font-size: 15px;
-  font-weight: 600;
-  color: #333;
+  font-size: 16px;
+  font-weight: 700;
+  background: linear-gradient(135deg, var(--accent), #8b5cf6);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
 }
 
 .top-nav {
   display: flex;
-  gap: 8px;
+  gap: 4px;
 }
 
 .top-btn {
-  padding: 4px 12px;
-  border: 1px solid #d5d5d5;
-  border-radius: 6px;
-  background: #fff;
-  color: #555;
-  font-size: 12px;
+  padding: 6px 14px;
+  border: none;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--text-secondary);
+  font-size: 13px;
   cursor: pointer;
+  position: relative;
+  transition: all 0.15s ease;
+}
+.top-btn::after {
+  content: "";
+  position: absolute;
+  bottom: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 0;
+  height: 2px;
+  background: var(--accent);
+  border-radius: 2px;
+  transition: width 0.15s ease;
 }
 .top-btn:hover {
-  background: #e8e8e8;
+  color: var(--text-primary);
+  transform: translateY(-1px);
+}
+.top-btn:hover::after {
+  width: 60%;
 }
 
 .app-body {
@@ -150,7 +199,7 @@ html, body, #app {
   flex: 1;
   display: flex;
   flex-direction: column;
-  background: #fff;
+  background: var(--bg-primary);
   overflow: hidden;
 }
 
@@ -175,5 +224,27 @@ html, body, #app {
 .title-fade-enter-from,
 .title-fade-leave-to {
   opacity: 0;
+}
+
+/* ── 全局动画 @keyframes ────────────────── */
+
+@keyframes message-enter {
+  from { opacity: 0; transform: translateY(12px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes blink-cursor {
+  0%, 100% { opacity: 1; }
+  50%      { opacity: 0; }
+}
+
+@keyframes ripple {
+  from { transform: scale(0); opacity: 0.25; }
+  to   { transform: scale(4); opacity: 0; }
+}
+
+@keyframes stop-pulse {
+  0%   { box-shadow: 0 0 0 0 rgba(239,68,68,0.4); }
+  100% { box-shadow: 0 0 0 8px rgba(239,68,68,0); }
 }
 </style>
