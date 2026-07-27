@@ -51,7 +51,7 @@
           {{ statusLabel }}
         </span>
       </div>
-      <div class="auto-connect-toggle" @click="store.autoConnect = !store.autoConnect">
+      <div class="auto-connect-toggle" @click="handleToggleAutoConnect">
         <div class="toggle-box" :class="{ on: store.autoConnect }">
           <svg v-if="store.autoConnect" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>
         </div>
@@ -98,6 +98,19 @@ onMounted(async () => {
     console.error("加载预设失败:", e);
   }
 });
+
+async function handleToggleAutoConnect() {
+  store.autoConnect = !store.autoConnect;
+  // 自动保存：仅当已有预设时立即持久化
+  if (store.activePresetId) {
+    try {
+      await store.savePreset();
+    } catch (e) {
+      store.autoConnect = !store.autoConnect; // 恢复
+      alert.error("保存失败", e.message || "自动连接设置未能保存");
+    }
+  }
+}
 
 async function handleTestConnection() {
   testing.value = true;
