@@ -31,7 +31,7 @@ defineEmits(["close"]);
 
 const { width: drawerWidth, isResizing: resizing, startResize } = useResizableDrawer({
   direction: "right",
-  minWidth: 280,
+  minWidth: 340,
   maxWidth: 700,
   defaultWidth: 420,
 });
