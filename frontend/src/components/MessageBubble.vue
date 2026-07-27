@@ -1,5 +1,8 @@
 <template>
-    <div class="bubble-row" :class="message.role">
+    <div class="bubble-row" :class="[message.role, { entering: isEntering }]">
+        <!-- 角色标签 -->
+        <span class="bubble-role-label">{{ message.role === 'user' ? '你' : 'Chat' }}</span>
+
         <!-- 编辑工具栏 -->
         <div v-if="isEditing" class="edit-toolbar">
             <button class="edit-btn save-btn" title="保存" @click="handleSave">✓</button>
@@ -207,10 +210,12 @@ function onBubbleClick(event) {
 </script>
 
 <style scoped>
+/* ── 气泡行 ──────────────────────────────── */
 .bubble-row {
   display: flex;
   flex-direction: column;
-  margin-bottom: 12px;
+  margin-bottom: 16px;
+  padding: 0 8px;
 }
 .bubble-row.user {
   align-items: flex-end;
@@ -219,32 +224,53 @@ function onBubbleClick(event) {
   align-items: flex-start;
 }
 
+/* ── 角色标签 ────────────────────────────── */
+.bubble-role-label {
+  font-size: 12px;
+  color: var(--text-muted);
+  margin-bottom: 4px;
+  padding: 0 4px;
+  user-select: none;
+}
+
+/* ── 入场动画 ────────────────────────────── */
+.bubble-row.entering .bubble {
+  animation: message-enter 0.25s ease-out;
+}
+
+/* ── 气泡容器 ────────────────────────────── */
 .bubble {
   max-width: 70%;
   min-width: 0;
   padding: 12px 16px;
-  border-radius: 12px;
-  border: 1px solid #e0e0e0;
-  background: #fff;
-  color: #333;
   font-size: 15px;
   line-height: 1.6;
   overflow: hidden;
 }
+
+/* ── User 气泡：靛蓝渐变 ─────────────────── */
 .bubble-row.user .bubble {
-  border-color: #d5d5d5;
+  background: linear-gradient(135deg, var(--accent), var(--accent-light));
+  color: #fff;
+  border-radius: var(--radius-lg) 4px var(--radius-lg) var(--radius-lg);
+  box-shadow: var(--shadow-sm);
 }
+
+/* ── Assistant 气泡：灰底 ────────────────── */
 .bubble-row.assistant .bubble {
-  border-color: #e8e8e8;
+  background: var(--bg-secondary);
+  color: var(--text-primary);
+  border-radius: 4px var(--radius-lg) var(--radius-lg) var(--radius-lg);
+  box-shadow: var(--shadow-xs);
 }
 
-/* ── 编辑模式 ───────────────────────────────── */
-
+/* ── 编辑模式 ────────────────────────────── */
 .bubble-editing {
   width: 100%;
   padding: 0;
-  border-color: #4a90d9;
-  box-shadow: 0 0 0 2px rgba(74, 144, 217, 0.15);
+  border: 1.5px solid var(--accent);
+  box-shadow: var(--shadow-md);
+  transition: border 0.2s ease, box-shadow 0.2s ease;
 }
 
 .edit-toolbar {
@@ -267,22 +293,22 @@ function onBubbleClick(event) {
 }
 
 .save-btn {
-  background: #4a90d9;
+  background: var(--accent);
   color: #fff;
-  border-color: #4a90d9;
+  border-color: var(--accent);
 }
 .save-btn:hover {
-  background: #3a7bc8;
-  border-color: #3a7bc8;
+  background: #3d5ce5;
+  border-color: #3d5ce5;
 }
 
 .cancel-btn {
   background: #fff;
-  color: #888;
+  color: var(--text-muted);
 }
 .cancel-btn:hover {
-  background: #f5f5f5;
-  color: #555;
+  background: #f0f1f5;
+  color: var(--text-secondary);
 }
 
 .edit-textarea {
@@ -295,7 +321,7 @@ function onBubbleClick(event) {
   font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
   font-size: 14px;
   line-height: 1.6;
-  color: #333;
+  color: var(--text-primary);
   background: #fafbfc;
   resize: vertical;
   outline: none;
@@ -307,46 +333,49 @@ function onBubbleClick(event) {
   overflow: hidden;
 }
 
-/* ── 推理块 ──────────────────────────────────── */
-
+/* ── 推理块 ──────────────────────────────── */
 .reasoning-block {
   margin-bottom: 10px;
-  border-left: 2px solid #d0d0d0;
+  border-left: 3px solid var(--accent);
   padding-left: 10px;
 }
 
 .reasoning-header {
   cursor: pointer;
   font-size: 13px;
-  color: #888;
+  color: var(--text-muted);
   user-select: none;
   display: flex;
   align-items: center;
   gap: 4px;
   margin-bottom: 4px;
 }
-
 .reasoning-header:hover {
-  color: #666;
+  color: var(--text-secondary);
 }
 
 .reasoning-icon {
   font-size: 10px;
   width: 12px;
+  transition: transform 0.2s ease;
 }
 
 .reasoning-content {
   font-size: 13px;
-  color: #999;
+  color: var(--text-muted);
   line-height: 1.5;
   white-space: pre-wrap;
   word-break: break-word;
   max-height: 200px;
   overflow-y: auto;
+  transition: max-height 0.3s ease;
+}
+.reasoning-block:not(.is-open) .reasoning-content {
+  max-height: 0;
+  overflow: hidden;
 }
 
-/* ── 代码块 ───────────────────────────────────── */
-
+/* ── 代码块 ──────────────────────────────── */
 .bubble-text :deep(.code-block-wrapper) {
   position: relative;
   margin: 8px 0;
@@ -368,8 +397,7 @@ function onBubbleClick(event) {
   font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
 }
 
-/* ── 复制按钮 ─────────────────────────────────── */
-
+/* ── 复制按钮 ────────────────────────────── */
 .bubble-text :deep(.copy-btn) {
   position: absolute;
   top: 8px;
@@ -395,8 +423,7 @@ function onBubbleClick(event) {
   background: #f3f4f6;
 }
 
-/* ── MD 通用元素 ──────────────────────────────── */
-
+/* ── MD 通用元素 ──────────────────────────── */
 .bubble-text :deep(p) {
   margin: 0 0 8px;
 }
@@ -430,12 +457,10 @@ function onBubbleClick(event) {
   font-weight: 600;
 }
 
-/* ── HtmlPreview 容器 ──────────────────────────── */
-
+/* ── HtmlPreview ──────────────────────────── */
 .bubble-text :deep(.html-preview-container) {
   margin: 8px 0;
 }
-
 .html-auto-block {
   margin: 8px 0;
 }
