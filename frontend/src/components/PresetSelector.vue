@@ -174,75 +174,48 @@ function showToast(msg) {
 </script>
 
 <style scoped>
-.preset-area {
-  position: relative;
-}
-
-.preset-row {
-  display: flex;
-  gap: 6px;
-  align-items: center;
-}
+.preset-area { position: relative; }
+.preset-row { display: flex; gap: 6px; align-items: center; }
 
 .preset-select {
-  flex: 1;
-  padding: 8px 12px;
-  border: 1px solid #d5d5d5;
-  border-radius: 8px;
-  font-size: 14px;
-  color: #333;
-  background: #fff;
-  outline: none;
-  font-family: inherit;
+  flex: 1; padding: 7px 10px;
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-sm);
+  font-size: 13px; color: var(--text-primary);
+  background: var(--bg-input); outline: none;
+  font-family: inherit; cursor: pointer;
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+.preset-select:focus {
+  border-color: var(--accent);
+  box-shadow: var(--focus-ring);
 }
 
 .preset-btn {
-  width: 32px;
-  height: 32px;
-  border: 1px solid #d5d5d5;
-  border-radius: 6px;
-  background: #fff;
-  color: #666;
-  font-size: 16px;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
-  line-height: 1;
-  transition: background 0.15s, color 0.15s, border-color 0.15s;
+  width: 32px; height: 32px;
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-sm);
+  background: var(--bg-input); color: var(--text-secondary);
+  cursor: pointer; display: flex; align-items: center;
+  justify-content: center; flex-shrink: 0;
+  transition: all 0.15s;
 }
 .preset-btn:hover:not(:disabled) {
-  background: #f0f0f0;
-  color: #333;
+  color: var(--text-primary);
+  border-color: var(--border);
+  background: var(--bg-input-hover);
 }
-.preset-btn:disabled {
-  opacity: 0.3;
-  cursor: default;
-}
+.preset-btn:disabled { opacity: 0.45; cursor: default; }
 
 /* Toast 提示 */
 .preset-toast {
-  position: absolute;
-  top: -28px;
-  left: 0;
-  font-size: 12px;
-  color: #555;
-  background: #f5f5f5;
-  padding: 3px 10px;
-  border-radius: 4px;
-  white-space: nowrap;
+  position: absolute; top: -28px; left: 0;
+  font-size: 12px; color: var(--text-secondary);
+  background: var(--bg-input); padding: 3px 10px;
+  border-radius: var(--radius-sm); white-space: nowrap;
   pointer-events: none;
 }
 
-.fade-enter-active,
-.fade-leave-active {
-  transition: opacity 0.25s;
-}
-.fade-enter-from,
-.fade-leave-to {
-  opacity: 0;
-}
-
-/* ── 弹窗通用 ─────────────────────────────────── */
+.fade-enter-active, .fade-leave-active { transition: opacity 0.25s; }
+.fade-enter-from, .fade-leave-to { opacity: 0; }
 </style>

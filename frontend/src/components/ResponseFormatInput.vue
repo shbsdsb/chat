@@ -12,22 +12,19 @@ const store = useSettingsStore();
 
 <style scoped>
 .resp-format-input {
-  width: 100%;
-  height: 150px;
-  padding: 12px;
-  border: 1px solid #d5d5d5;
-  border-radius: 8px;
-  font-size: 13px;
-  font-family: "SF Mono", "Fira Code", "Consolas", monospace;
-  color: #333;
-  outline: none;
-  resize: vertical;
-  line-height: 1.5;
+  width: 100%; min-height: 90px;
+  padding: 10px 12px;
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-sm);
+  font-size: 12px; color: var(--text-primary);
+  background: var(--bg-input); outline: none;
+  resize: vertical; line-height: 1.5;
+  font-family: "Consolas", "Monaco", monospace;
+  transition: border-color 0.15s, box-shadow 0.15s;
 }
 .resp-format-input:focus {
-  border-color: #aaa;
+  border-color: var(--accent);
+  box-shadow: var(--focus-ring);
 }
-.resp-format-input::placeholder {
-  color: #bbb;
-}
+.resp-format-input::placeholder { color: var(--text-muted); }
 </style>

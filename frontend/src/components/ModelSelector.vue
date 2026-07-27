@@ -8,8 +8,9 @@
         {{ store.model || 'gpt-4o' }}
       </option>
     </select>
-    <button class="fetch-btn" title="拉取模型列表" @click="handleFetch" :disabled="fetching">
+    <button class="fetch-btn" @click="handleFetch" :disabled="fetching">
       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" :class="{ spinning: fetching }"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.13-9.36L23 10"/></svg>
+      拉取
     </button>
   </div>
 </template>
@@ -35,52 +36,38 @@ async function handleFetch() {
 </script>
 
 <style scoped>
-.model-row {
-  display: flex;
-  gap: 6px;
-  align-items: center;
-}
+.model-row { display: flex; gap: 6px; align-items: center; }
 
 .model-select {
-  flex: 1;
-  padding: 8px 12px;
-  border: 1px solid #d5d5d5;
-  border-radius: 8px;
-  font-size: 14px;
-  color: #333;
-  background: #fff;
-  outline: none;
-  font-family: inherit;
+  flex: 1; padding: 7px 10px;
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-sm);
+  font-size: 13px; color: var(--text-primary);
+  background: var(--bg-input); outline: none;
+  font-family: inherit; cursor: pointer;
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+.model-select:focus {
+  border-color: var(--accent);
+  box-shadow: var(--focus-ring);
 }
 
 .fetch-btn {
-  width: 32px;
-  height: 32px;
-  border: 1px solid #d5d5d5;
-  border-radius: 6px;
-  background: #fff;
-  color: #666;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
+  height: 32px; padding: 0 10px;
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-sm);
+  background: var(--bg-input); color: var(--text-secondary);
+  cursor: pointer; font-size: 12px;
+  display: flex; align-items: center; gap: 5px;
+  transition: all 0.15s; font-family: inherit;
 }
 .fetch-btn:hover:not(:disabled) {
-  background: #f0f0f0;
-  color: #333;
+  color: var(--text-primary);
+  border-color: var(--border);
+  background: var(--bg-input-hover);
 }
-.fetch-btn:disabled {
-  opacity: 0.3;
-  cursor: default;
-}
+.fetch-btn:disabled { opacity: 0.45; cursor: default; }
 
-.spinning {
-  animation: spin 1s linear infinite;
-}
-
-@keyframes spin {
-  from { transform: rotate(0deg); }
-  to { transform: rotate(360deg); }
-}
+.spinning { animation: spin 1s linear infinite; }
+@keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
 </style>
