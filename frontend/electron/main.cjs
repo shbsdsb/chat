@@ -1,6 +1,7 @@
 const { app, BrowserWindow, Menu } = require("electron");
 const path = require("path");
 const fs = require("fs");
+const http = require("http");
 
 const isDev = process.env.NODE_ENV === "development" || !app.isPackaged;
 
@@ -76,6 +77,16 @@ function createWindow() {
 app.whenReady().then(createWindow);
 
 app.on("window-all-closed", () => {
+  // 读取后端配置，检查是否需要联动关闭
+  const configPath = path.join(__dirname, "..", "..", "backend", "config.json");
+  try {
+    const cfg = JSON.parse(fs.readFileSync(configPath, "utf-8"));
+    if (cfg.shutdown_with_frontend) {
+      const req = http.request({ hostname: "127.0.0.1", port: cfg.PORT || 5000, path: "/api/shutdown", method: "POST", timeout: 2000 });
+      req.on("error", () => {});
+      req.end();
+    }
+  } catch (_) { /* 配置文件不存在或不可读，跳过 */ }
   app.quit();
 });
 
