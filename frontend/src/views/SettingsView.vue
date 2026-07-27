@@ -97,10 +97,6 @@ onMounted(async () => {
   } catch (e) {
     console.error("加载预设失败:", e);
   }
-  // 自动连接
-  if (store.autoConnect && store.apiUrl && store.apiKey) {
-    handleTestConnection();
-  }
 });
 
 async function handleTestConnection() {

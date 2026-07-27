@@ -54,6 +54,7 @@ def create_setting_route():
         "response_format": response_format,
         "temperature": temperature,
         "max_tokens": max_tokens,
+        "auto_connect": bool(body.get("auto_connect", False)),
         "is_default": False,
         "created_at": now,
         "updated_at": now,
@@ -83,6 +84,12 @@ def update_setting_route(setting_id):
     else:
         api_key = new_api_key
 
+    auto_connect = body.get("auto_connect")
+    if auto_connect is not None:
+        auto_connect = bool(auto_connect)
+    else:
+        auto_connect = row.get("auto_connect", False)
+
     now = datetime.now(timezone.utc).isoformat()
 
     updates = {
@@ -93,6 +100,7 @@ def update_setting_route(setting_id):
         "response_format": response_format,
         "temperature": temperature,
         "max_tokens": max_tokens,
+        "auto_connect": auto_connect,
         "updated_at": now,
     }
     update_setting(setting_id, updates)

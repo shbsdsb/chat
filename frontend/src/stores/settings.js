@@ -60,6 +60,7 @@ export const useSettingsStore = defineStore("settings", {
       this.apiKey = preset.api_key || "";
       this.model = preset.model || "gpt-4o";
       this.responseFormat = preset.response_format || "";
+      this.autoConnect = preset.auto_connect ?? false;
     },
 
     async createPreset(name) {
@@ -78,6 +79,7 @@ export const useSettingsStore = defineStore("settings", {
         response_format: this.responseFormat,
         temperature: 0.7,
         max_tokens: 4096,
+        auto_connect: this.autoConnect,
       });
       if (!preset || !preset.id) {
         throw new Error("创建预设失败：服务器返回异常");
@@ -96,6 +98,7 @@ export const useSettingsStore = defineStore("settings", {
       if (this.apiKey) {
         payload.api_key = this.apiKey;
       }
+      payload.auto_connect = this.autoConnect;
       const updated = await settingsApi.update(this.activePresetId, payload);
       if (!updated || !updated.id) {
         throw new Error("保存失败：服务器返回异常");

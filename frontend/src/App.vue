@@ -69,11 +69,13 @@ import { useChatStore } from "@/stores/chat";
 import { useParamPresetsStore } from "@/stores/paramPresets";
 import { useCssPresetsStore } from "@/stores/cssPresets";
 import { useExtensionsStore } from "@/stores/extensions";
+import { useSettingsStore } from "@/stores/settings";
 
 const chatStore = useChatStore();
 const paramPresetsStore = useParamPresetsStore();
 const cssPresetsStore = useCssPresetsStore();
 const extensionsStore = useExtensionsStore();
+const settingsStore = useSettingsStore();
 const showConversations = ref(false);
 
 // 单状态互斥：四个设置抽屉共用一个 activeDrawer
@@ -86,11 +88,28 @@ function toggleDrawer(name) {
   activeDrawer.value = activeDrawer.value === name ? null : name;
 }
 
-onMounted(() => {
+onMounted(async () => {
   chatStore.loadConversations();
   paramPresetsStore.loadPresets();
   cssPresetsStore.loadPresets();
   extensionsStore.fetchExtensions();
+
+  // 自动连接：加载预设，如果当前预设开启了自动连接则测试
+  try {
+    await settingsStore.loadPresets();
+    const preset = settingsStore.presets.find(p => p.id === settingsStore.activePresetId);
+    if (preset?.auto_connect && settingsStore.apiUrl && settingsStore.apiKey) {
+      settingsStore.connectionStatus = "testing";
+      try {
+        await settingsStore.fetchModels();
+        settingsStore.connectionStatus = "connected";
+      } catch {
+        settingsStore.connectionStatus = "disconnected";
+      }
+    }
+  } catch {
+    // 预设加载失败不阻塞启动
+  }
 });
 </script>
 
