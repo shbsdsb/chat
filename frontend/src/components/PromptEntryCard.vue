@@ -42,7 +42,7 @@
 </template>
 
 <script setup>
-import { ref, watch, nextTick, onBeforeUnmount } from "vue";
+import { ref, watch, nextTick, computed, onBeforeUnmount } from "vue";
 import { List } from "lucide-vue-next";
 import { usePromptEntriesStore } from "@/stores/promptEntries";
 import { useParamPresetsStore } from "@/stores/paramPresets";
