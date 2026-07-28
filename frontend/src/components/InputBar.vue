@@ -108,7 +108,7 @@ function handleSend() {
 
 .input-bar .input-wrapper {
   display: flex;
-  align-items: flex-end;
+  align-items: center;
   border: 1px solid var(--glass-border);
   border-radius: var(--radius-xl);
   padding: 6px 6px 6px 18px;
@@ -157,7 +157,7 @@ function handleSend() {
   overflow: hidden;
 }
 .input-bar .btn-send:hover {
-  background: #3d5ce5;
+  background: var(--accent-light);
   transform: scale(1.08);
   box-shadow: 0 0 16px rgba(79,110,246,0.35);
 }

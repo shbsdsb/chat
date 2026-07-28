@@ -1,21 +1,23 @@
 <template>
-  <div class="css-editor">
+  <div class="card">
+    <div class="card-header">
+      <span class="card-icon"><Palette :size="18" /></span>
+      <span class="card-label">CSS 主题</span>
+    </div>
+
     <!-- 预设工具栏 -->
     <div class="preset-toolbar">
       <select
-        class="preset-select"
+        class="input-field"
+        style="flex:1;min-width:140px;"
         :value="store.activeId || ''"
         @change="store.selectPreset($event.target.value)"
       >
-        <option
-          v-for="p in store.presets"
-          :key="p.id"
-          :value="p.id"
-        >{{ p.name }}</option>
+        <option v-for="p in store.presets" :key="p.id" :value="p.id">{{ p.name }}</option>
       </select>
-      <button class="toolbar-btn" @click="handleRename" title="重命名">🖊</button>
-      <button class="toolbar-btn primary" @click="handleCreate" title="新建预设">＋ 新建</button>
-      <button class="toolbar-btn danger" @click="handleDelete" title="删除预设">🗑</button>
+      <button class="icon-btn" @click="handleRename" title="重命名"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 3a2.83 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/></svg></button>
+      <button class="btn-sm primary" @click="handleCreate">+ 新建</button>
+      <button class="icon-btn danger" @click="handleDelete" title="删除预设"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg></button>
     </div>
 
     <!-- CSS 编辑器 -->
@@ -30,12 +32,8 @@
 
     <!-- 操作按钮 -->
     <div class="footer-btns">
-      <button class="footer-btn" @click="handleReset" :disabled="liveContent === savedContent">↺ 重置</button>
-      <button
-        class="footer-btn save"
-        @click="handleSave"
-        :disabled="liveContent === savedContent"
-      >💾 保存</button>
+      <button class="btn-sm outline" @click="handleReset" :disabled="liveContent === savedContent">↺ 重置</button>
+      <button class="btn-sm primary" @click="handleSave" :disabled="liveContent === savedContent">保存</button>
     </div>
 
     <!-- 重命名弹窗 -->
@@ -68,6 +66,7 @@
 
 <script setup>
 import { ref, watch, nextTick, computed } from "vue";
+import { Palette } from "lucide-vue-next";
 import { useCssPresetsStore } from "@/stores/cssPresets";
 import { useAlertStore } from "@/stores/alert";
 import BaseDialog from "@/components/BaseDialog.vue";
@@ -169,129 +168,44 @@ async function confirmRename() {
 </script>
 
 <style scoped>
-.css-editor {
-  display: flex;
-  flex-direction: column;
-  height: 100%;
-}
+/* ——— 卡片 ——— */
+.card { background: var(--bg-primary); border: 1px solid var(--border); border-radius: var(--radius-lg); box-shadow: var(--shadow-sm); padding: 16px 18px; display: flex; flex-direction: column; height: 100%; }
+.card-header { display: flex; align-items: center; gap: 8px; margin-bottom: 12px; }
+.card-icon { color: var(--accent); display: flex; align-items: center; width: 20px; height: 20px; }
+.card-label { font-size: 13px; font-weight: 600; color: var(--text-secondary); }
 
-/* 预设工具栏 */
-.preset-toolbar {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  margin-bottom: 12px;
-  flex-shrink: 0;
-}
-.preset-select {
-  flex: 1;
-  padding: 5px 8px;
-  border: 1px solid #d5d5d5;
-  border-radius: 6px;
-  font-size: 13px;
-  background: #fff;
-}
-.toolbar-btn {
-  padding: 4px 8px;
-  border: 1px solid #d5d5d5;
-  border-radius: 6px;
-  background: #fff;
-  font-size: 12px;
-  cursor: pointer;
-  white-space: nowrap;
-}
-.toolbar-btn:hover { background: #f0f0f0; }
-.toolbar-btn.primary { color: #4a90d9; border-color: #4a90d9; }
-.toolbar-btn.danger { color: #e05555; border-color: #e05555; }
+/* ——— 按钮 ——— */
+.btn-sm { display: inline-flex; align-items: center; gap: 5px; padding: 7px 14px; border: none; border-radius: var(--radius-sm); font-size: 12px; font-weight: 600; cursor: pointer; font-family: inherit; white-space: nowrap; transition: all 0.15s; }
+.btn-sm.primary { background: var(--accent); color: #fff; box-shadow: 0 1px 3px rgba(79,110,246,0.2); }
+.btn-sm.primary:hover:not(:disabled) { background: var(--accent-light); transform: translateY(-1px); box-shadow: 0 2px 6px rgba(79,110,246,0.3); }
+.btn-sm.outline { background: var(--bg-input); color: var(--text-secondary); border: 1px solid var(--border-light); }
+.btn-sm.outline:hover:not(:disabled) { color: var(--text-primary); border-color: var(--border); background: var(--bg-input-hover); }
+.btn-sm:disabled { opacity: 0.45; cursor: default; transform: none; box-shadow: none; }
+.icon-btn { width: 32px; height: 32px; border: 1px solid var(--border-light); border-radius: var(--radius-sm); background: var(--bg-input); color: var(--text-secondary); cursor: pointer; display: flex; align-items: center; justify-content: center; flex-shrink: 0; transition: all 0.15s; }
+.icon-btn:hover { color: var(--text-primary); border-color: var(--border); background: var(--bg-input-hover); }
+.icon-btn.danger:hover { color: var(--danger); border-color: var(--danger); background: var(--danger-bg); }
 
-/* CSS 编辑器 */
-.css-textarea {
-  flex: 1;
-  width: 100%;
-  padding: 14px;
-  border: 1px solid #d5d5d5;
-  border-radius: 6px;
-  font-family: "Consolas", "Monaco", "Courier New", monospace;
-  font-size: 13px;
-  line-height: 1.6;
-  resize: none;
-  outline: none;
-  background: #1e1e1e;
-  color: #d4d4d4;
-  tab-size: 2;
-}
-.css-textarea:focus { border-color: #4a90d9; }
+/* ——— 输入 ——— */
+.input-field { width: 100%; padding: 7px 10px; border: 1px solid var(--border-light); border-radius: var(--radius-sm); font-size: 13px; color: var(--text-primary); background: var(--bg-input); outline: none; font-family: inherit; transition: border-color 0.15s, box-shadow 0.15s; }
+.input-field:focus { border-color: var(--accent); box-shadow: var(--focus-ring); }
+
+/* ——— 工具栏 ——— */
+.preset-toolbar { display: flex; align-items: center; gap: 6px; margin-bottom: 12px; flex-shrink: 0; }
+
+/* ——— 编辑器 ——— */
+.css-textarea { flex: 1; width: 100%; padding: 14px; border: 1px solid var(--border-light); border-radius: var(--radius-sm); font-family: "Consolas", "Monaco", "Courier New", monospace; font-size: 13px; line-height: 1.6; resize: none; outline: none; background: #1e1e1e; color: #d4d4d4; tab-size: 2; transition: border-color 0.15s, box-shadow 0.15s; }
+.css-textarea:focus { border-color: var(--accent); box-shadow: var(--focus-ring); }
 .css-textarea::placeholder { color: #666; }
 
-/* 底部按钮 */
-.footer-btns {
-  display: flex;
-  justify-content: flex-end;
-  gap: 8px;
-  margin-top: 12px;
-  flex-shrink: 0;
-}
-.footer-btn {
-  padding: 6px 16px;
-  border: 1px solid #d5d5d5;
-  border-radius: 6px;
-  background: #fff;
-  font-size: 13px;
-  cursor: pointer;
-}
-.footer-btn:hover:not(:disabled) { background: #f0f0f0; }
-.footer-btn:disabled { opacity: 0.4; cursor: default; }
-.footer-btn.save {
-  background: #4a90d9;
-  color: #fff;
-  border-color: #4a90d9;
-}
-.footer-btn.save:hover:not(:disabled) { background: #3a7bc8; }
+/* ——— 底部按钮 ——— */
+.footer-btns { display: flex; justify-content: flex-end; gap: 8px; margin-top: 12px; flex-shrink: 0; }
 
-/* 重命名弹窗 */
-.rename-overlay {
-  position: fixed;
-  inset: 0;
-  background: rgba(0,0,0,0.3);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 1000;
-}
-.rename-dialog {
-  background: #fff;
-  padding: 20px;
-  border-radius: 8px;
-  box-shadow: 0 4px 20px rgba(0,0,0,0.15);
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-  min-width: 260px;
-}
-.rename-dialog input {
-  padding: 8px 12px;
-  border: 1px solid #d5d5d5;
-  border-radius: 6px;
-  font-size: 14px;
-  outline: none;
-}
-.rename-dialog input:focus { border-color: #4a90d9; }
-.rename-btns {
-  display: flex;
-  justify-content: flex-end;
-  gap: 8px;
-}
-.rename-btns button {
-  padding: 5px 14px;
-  border: 1px solid #d5d5d5;
-  border-radius: 6px;
-  background: #fff;
-  cursor: pointer;
-  font-size: 13px;
-}
-.rename-btns button:first-child {
-  background: #4a90d9;
-  color: #fff;
-  border-color: #4a90d9;
-}
+/* ——— 重命名弹窗 ——— */
+.rename-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.3); display: flex; align-items: center; justify-content: center; z-index: 1000; }
+.rename-dialog { background: var(--bg-primary); padding: 20px; border-radius: var(--radius-md); box-shadow: var(--shadow-md); display: flex; flex-direction: column; gap: 12px; min-width: 260px; }
+.rename-dialog input { padding: 8px 12px; border: 1px solid var(--border-light); border-radius: var(--radius-sm); font-size: 14px; outline: none; background: var(--bg-input); color: var(--text-primary); }
+.rename-dialog input:focus { border-color: var(--accent); box-shadow: var(--focus-ring); }
+.rename-btns { display: flex; justify-content: flex-end; gap: 8px; }
+.rename-btns button { padding: 5px 14px; border: 1px solid var(--border-light); border-radius: var(--radius-sm); background: var(--bg-input); cursor: pointer; font-size: 13px; color: var(--text-secondary); }
+.rename-btns button:first-child { background: var(--accent); color: #fff; border-color: var(--accent); }
 </style>

@@ -140,7 +140,7 @@ function cancelDelete() {
   transition: background 0.2s ease;
 }
 .conv-item:hover {
-  background: rgba(0,0,0,0.03);
+  background: var(--bg-input-hover);
 }
 .conv-item.active {
   background: rgba(79,110,246,0.08);
@@ -179,7 +179,7 @@ function cancelDelete() {
   width: 26px;
   height: 26px;
   border: none;
-  border-radius: 6px;
+  border-radius: var(--radius-sm);
   background: transparent;
   color: var(--text-muted);
   cursor: pointer;
@@ -190,11 +190,11 @@ function cancelDelete() {
   transition: background 0.12s, color 0.12s;
 }
 .conv-action-btn:hover {
-  background: rgba(0,0,0,0.06);
+  background: var(--bg-input-hover);
   color: var(--text-primary);
 }
 .conv-action-delete:hover {
-  background: rgba(239,68,68,0.10);
+  background: var(--danger-bg);
   color: var(--danger);
 }
 </style>

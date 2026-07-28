@@ -284,8 +284,8 @@ function onBubbleClick(event) {
 .edit-btn {
   width: 30px;
   height: 30px;
-  border: 1px solid #d0d0d0;
-  border-radius: 6px;
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-sm);
   font-size: 15px;
   cursor: pointer;
   display: flex;
@@ -300,31 +300,30 @@ function onBubbleClick(event) {
   border-color: var(--accent);
 }
 .save-btn:hover {
-  background: #3d5ce5;
-  border-color: #3d5ce5;
+  background: var(--accent-light);
+  border-color: var(--accent-light);
 }
 
 .cancel-btn {
-  background: #fff;
+  background: var(--bg-primary);
   color: var(--text-muted);
 }
 .cancel-btn:hover {
-  background: #f0f1f5;
+  background: var(--bg-input-hover);
   color: var(--text-secondary);
 }
 
 .edit-textarea {
   width: 100%;
-  min-width: 420px;
-  min-height: 120px;
+  min-height: 100px;
   padding: 16px;
   border: none;
-  border-radius: 12px;
+  border-radius: var(--radius-md);
   font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
   font-size: 14px;
   line-height: 1.6;
   color: var(--text-primary);
-  background: #fafbfc;
+  background: var(--bg-input);
   resize: vertical;
   outline: none;
   box-sizing: border-box;
@@ -387,11 +386,13 @@ function onBubbleClick(event) {
 .bubble-text :deep(.code-block-wrapper pre) {
   margin: 0;
   padding: 16px;
-  border-radius: 6px;
-  background: #f6f8fa;
+  border-radius: var(--radius-sm);
+  background: var(--code-bg);
   overflow-x: auto;
   font-size: 13px;
   line-height: 1.5;
+  color: var(--code-text);
+  border: 1px solid var(--code-border);
 }
 .bubble-text :deep(.code-block-wrapper code) {
   background: transparent;
@@ -438,10 +439,10 @@ function onBubbleClick(event) {
   margin: 0 0 8px;
 }
 .bubble-text :deep(blockquote) {
-  border-left: 3px solid #d0d7de;
+  border-left: 3px solid var(--border-light);
   padding-left: 12px;
   margin: 8px 0;
-  color: #656d76;
+  color: var(--text-secondary);
 }
 .bubble-text :deep(table) {
   border-collapse: collapse;
@@ -450,12 +451,12 @@ function onBubbleClick(event) {
 }
 .bubble-text :deep(th),
 .bubble-text :deep(td) {
-  border: 1px solid #d0d7de;
+  border: 1px solid var(--border-light);
   padding: 6px 12px;
   text-align: left;
 }
 .bubble-text :deep(th) {
-  background: #f6f8fa;
+  background: var(--bg-secondary);
   font-weight: 600;
 }
 

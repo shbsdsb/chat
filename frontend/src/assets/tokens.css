@@ -58,4 +58,9 @@
   --status-dot-connected: #22c55e;
   --toggle-bg-off: #e2e4eb;
   --toggle-bg-on: var(--accent);
+
+  /* 代码块 */
+  --code-bg: #1e1e1e;
+  --code-text: #d4d4d4;
+  --code-border: #333;
 }

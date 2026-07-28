@@ -61,8 +61,8 @@ function handleNewChat() {
 
 .drawer-inner {
   flex: 1;
-  background: #f5f5f5;
-  border-right: 1px solid #e0e0e0;
+  background: var(--bg-tertiary);
+  border-right: 1px solid var(--border);
   display: flex;
   flex-direction: column;
   overflow: hidden;
@@ -73,13 +73,13 @@ function handleNewChat() {
   align-items: center;
   justify-content: space-between;
   padding: 12px 16px;
-  border-bottom: 1px solid #e0e0e0;
+  border-bottom: 1px solid var(--border);
   flex-shrink: 0;
 }
 .drawer-header h3 {
   font-size: 15px;
   font-weight: 600;
-  color: #333;
+  color: var(--text-primary);
   white-space: nowrap;
 }
 
@@ -95,16 +95,16 @@ function handleNewChat() {
 .btn-new-chat {
   width: 100%;
   padding: 8px 16px;
-  border: 1px solid #d5d5d5;
-  border-radius: 8px;
-  background: #fff;
-  color: #333;
-  font-size: 14px;
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-sm);
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  font-size: 13px;
   cursor: pointer;
   transition: background 0.15s;
 }
 .btn-new-chat:hover {
-  background: #e8e8e8;
+  background: var(--bg-input-hover);
 }
 
 .conv-list {
