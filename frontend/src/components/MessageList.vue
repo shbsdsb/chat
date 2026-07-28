@@ -3,7 +3,6 @@
     <template v-for="msg in chatStore.messages" :key="msg.id">
       <MessageBubble :message="msg" />
       <MessageActions
-        v-if="isLastAssistant(msg)"
         :message="msg"
         @edit="handleEdit"
         @replay="handleReplay"

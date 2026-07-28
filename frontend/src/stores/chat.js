@@ -182,6 +182,10 @@ export const useChatStore = defineStore("chat", {
       const assistantMsg = this.messages.find((m) => m.id === id && m.role === "assistant");
       if (!assistantMsg || this.isStreaming) return;
 
+      // 清空旧内容，避免逐字替换残留
+      assistantMsg.content = "";
+      assistantMsg.reasoning_content = "";
+
       if (!this.aiVersions[id]) {
         this.aiVersions[id] = [assistantMsg.content];
         this.aiVersionIndex = 0;

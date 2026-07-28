@@ -120,7 +120,6 @@ function handleSend() {
 }
 .input-bar .input-wrapper:focus-within {
   border-color: var(--accent);
-  box-shadow: var(--shadow-sm), 0 0 0 3px rgba(79,110,246,0.1);
 }
 
 .input-bar .input-field {

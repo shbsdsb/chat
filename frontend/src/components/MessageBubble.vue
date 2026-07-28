@@ -5,7 +5,7 @@
 
         <!-- 编辑工具栏 -->
         <div v-if="isEditing" class="edit-toolbar">
-            <button class="edit-btn save-btn" title="保存" @click="handleSave">✓</button>
+            <button class="edit-btn save-btn" title="保存" @click="handleSave" :disabled="!editContent.trim()">✓</button>
             <button class="edit-btn cancel-btn" title="取消" @click="handleCancel">✗</button>
         </div>
 
