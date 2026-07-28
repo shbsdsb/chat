@@ -8,11 +8,19 @@
     @dragover.prevent="onDragOver"
     @drop.prevent="onDrop"
   >
-    <span class="pe-item__handle" title="拖拽排序">*</span>
+    <span class="pe-item__handle" title="拖拽排序">
+      <svg width="18" height="18" viewBox="0 0 100 100">
+        <g stroke="currentColor" stroke-width="14" stroke-linecap="round" stroke-linejoin="round">
+          <line x1="50" y1="16" x2="50" y2="84"/>
+          <line x1="20" y1="32" x2="80" y2="68"/>
+          <line x1="80" y1="32" x2="20" y2="68"/>
+        </g>
+      </svg>
+    </span>
     <span class="pe-item__name">{{ entry.name }}</span>
     <span class="pe-item__token">-</span>
     <button class="pe-item__edit" title="编辑" @click="$emit('edit', entry)">
-      ✏️
+      <Pencil :size="14" />
     </button>
     <div
       class="pe-item__toggle toggle-switch"
@@ -26,6 +34,7 @@
 
 <script setup>
 import { ref } from "vue";
+import { Pencil } from "lucide-vue-next";
 
 const props = defineProps({
   entry: { type: Object, required: true },
@@ -79,10 +88,11 @@ function onDrop(e) {
 
 .pe-item__handle {
   cursor: grab;
-  font-size: 16px;
   color: var(--text-muted, #9ca3af);
   margin-right: 8px;
   flex-shrink: 0;
+  display: flex;
+  align-items: center;
 }
 .pe-item__handle:active {
   cursor: grabbing;
@@ -110,11 +120,13 @@ function onDrop(e) {
   background: none;
   border: none;
   cursor: pointer;
-  font-size: 14px;
+  color: var(--text-muted, #9ca3af);
   opacity: 0.6;
   padding: 4px;
   margin-right: 8px;
   flex-shrink: 0;
+  display: flex;
+  align-items: center;
 }
 .pe-item__edit:hover {
   opacity: 1;

@@ -1,7 +1,7 @@
 <template>
   <div class="card">
     <div class="card-header">
-      <span class="card-icon">📋</span>
+      <span class="card-icon"><List :size="18" /></span>
       <span class="card-label">提示词条目</span>
       <button class="icon-btn" title="添加条目" @click="showAddInput = true"
         v-if="!showAddInput"
@@ -42,6 +42,7 @@
 
 <script setup>
 import { ref, watch, nextTick } from "vue";
+import { List } from "lucide-vue-next";
 import { usePromptEntriesStore } from "@/stores/promptEntries";
 import { useParamPresetsStore } from "@/stores/paramPresets";
 import PromptEntryItem from "@/components/PromptEntryItem.vue";
@@ -112,6 +113,7 @@ function onDrop(draggedId, targetId) {
   border-radius: var(--radius-card, 16px);
   box-shadow: var(--shadow-sm, 0 1px 3px rgba(0, 0, 0, 0.08));
   padding: 16px 20px;
+  margin-top: 16px;
 }
 
 .card-header {
@@ -122,7 +124,9 @@ function onDrop(draggedId, targetId) {
 }
 
 .card-icon {
-  font-size: 16px;
+  display: flex;
+  align-items: center;
+  color: var(--accent, #4f6ef6);
 }
 
 .card-label {
