@@ -100,9 +100,14 @@ function onItemMouseDown(entry, event) {
   dragging.value = true;
   dragIndex.value = idx;
   targetIndex.value = idx;
-  offsetY.value = 0;
   startY = event.clientY;
   itemHeight = getItemHeight();
+
+  // 初始偏移：让被拖拽条目从鼠标位置开始
+  const h = itemHeight;
+  const rect = listRef.value.getBoundingClientRect();
+  const relativeY = event.clientY - rect.top;
+  offsetY.value = relativeY - idx * h - h / 2;
 
   document.addEventListener("mousemove", onMouseMove);
   document.addEventListener("mouseup", onMouseUp);
