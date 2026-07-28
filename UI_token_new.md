@@ -248,27 +248,85 @@
 
 项目统一使用 Lucide（`lucide-vue-next`）图标，`size` 统一为 `18`（工具栏/卡片头）或 `14`（条目行内按钮）或 `16`（Modal 按钮）。
 
-| 导入名 | 图标描述 | 使用位置 | size |
-|--------|---------|---------|------|
-| `Sidebar` | 侧边栏（三条横线） | App.vue 工具栏 | 18 |
-| `Palette` | 调色板 | App.vue 工具栏、CssPresetEditor | 18 |
-| `SlidersHorizontal` | 水平滑块 | App.vue 工具栏、ParamPresetSelector | 18 |
-| `Plug` | 插头 | App.vue 工具栏、SettingsView | 18 |
-| `Blocks` | 方块网格 | App.vue 工具栏 | 18 |
-| `List` | 列表（圆点+横线） | PromptEntryCard 卡片头 | 18 |
-| `Pencil` | 铅笔 | PromptEntryItem 编辑按钮 | 14 |
-| `X` | 叉号关闭 | PromptEntryModal 取消按钮 | 16 |
-| `Trash2` | 垃圾桶 | PromptEntryModal 删除按钮 | 16 |
-| `Save` | 软盘保存 | PromptEntryModal 保存按钮 | 16 |
-| `Settings` | 齿轮 | SettingsView 卡片头 | 18 |
-| `MessageSquare` | 消息气泡 | SettingsView 模型卡片 | 18 |
-| `Code` | 代码尖括号 | SettingsView 响应格式卡片 | 18 |
-| `RefreshCw` | 刷新圆圈 | SettingsView 拉取模型按钮 | 16 |
+<div style="display:flex;flex-wrap:wrap;gap:12px;align-items:center;padding:8px 0;">
+
+<div style="display:flex;align-items:center;gap:6px;background:#f8f9fb;border-radius:8px;padding:6px 12px;">
+<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#5b5b7a" stroke-width="2" stroke-linecap="round"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="9" y1="3" x2="9" y2="21"/></svg>
+<code>Sidebar</code>
+</div>
+
+<div style="display:flex;align-items:center;gap:6px;background:#f8f9fb;border-radius:8px;padding:6px 12px;">
+<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#5b5b7a" stroke-width="2" stroke-linecap="round"><circle cx="13.5" cy="6.5" r="2.5"/><circle cx="18.5" cy="10.5" r="2.5"/><circle cx="9.5" cy="14.5" r="2.5"/><circle cx="14.5" cy="18.5" r="2.5"/><path d="M10.5 6.5a6 6 0 0 0-5 5"/></svg>
+<code>Palette</code>
+</div>
+
+<div style="display:flex;align-items:center;gap:6px;background:#f8f9fb;border-radius:8px;padding:6px 12px;">
+<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#5b5b7a" stroke-width="2" stroke-linecap="round"><line x1="4" y1="21" x2="4" y2="14"/><line x1="4" y1="10" x2="4" y2="3"/><line x1="12" y1="21" x2="12" y2="12"/><line x1="12" y1="8" x2="12" y2="3"/><line x1="20" y1="21" x2="20" y2="16"/><line x1="20" y1="12" x2="20" y2="3"/><line x1="1" y1="14" x2="7" y2="14"/><line x1="9" y1="8" x2="15" y2="8"/><line x1="17" y1="16" x2="23" y2="16"/></svg>
+<code>SlidersHorizontal</code>
+</div>
+
+<div style="display:flex;align-items:center;gap:6px;background:#f8f9fb;border-radius:8px;padding:6px 12px;">
+<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#5b5b7a" stroke-width="2" stroke-linecap="round"><path d="M12 22v-5"/><path d="M9 8V2"/><path d="M15 8V2"/><path d="M18 8v-.5a3 3 0 0 0-3-3H9a3 3 0 0 0-3 3V8"/><path d="M5 8h14a2 2 0 0 1 2 2v2a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-2a2 2 0 0 1 2-2z"/></svg>
+<code>Plug</code>
+</div>
+
+<div style="display:flex;align-items:center;gap:6px;background:#f8f9fb;border-radius:8px;padding:6px 12px;">
+<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#5b5b7a" stroke-width="2" stroke-linecap="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
+<code>Blocks</code>
+</div>
+
+<div style="display:flex;align-items:center;gap:6px;background:#f8f9fb;border-radius:8px;padding:6px 12px;">
+<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#5b5b7a" stroke-width="2" stroke-linecap="round"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>
+<code>List</code>
+</div>
+
+<div style="display:flex;align-items:center;gap:6px;background:#f8f9fb;border-radius:8px;padding:6px 12px;">
+<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#5b5b7a" stroke-width="2" stroke-linecap="round"><path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"/></svg>
+<code>Pencil</code>
+</div>
+
+<div style="display:flex;align-items:center;gap:6px;background:#f8f9fb;border-radius:8px;padding:6px 12px;">
+<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#5b5b7a" stroke-width="2" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+<code>X</code>
+</div>
+
+<div style="display:flex;align-items:center;gap:6px;background:#f8f9fb;border-radius:8px;padding:6px 12px;">
+<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#5b5b7a" stroke-width="2" stroke-linecap="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+<code>Trash2</code>
+</div>
+
+<div style="display:flex;align-items:center;gap:6px;background:#4f6ef6;border-radius:8px;padding:6px 12px;">
+<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
+<code>Save</code>
+</div>
+
+<div style="display:flex;align-items:center;gap:6px;background:#f8f9fb;border-radius:8px;padding:6px 12px;">
+<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#5b5b7a" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="3"/><path d="M12 1v2m0 18v2M4.22 4.22l1.42 1.42m12.72 12.72 1.42 1.42M1 12h2m18 0h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/></svg>
+<code>Settings</code>
+</div>
+
+<div style="display:flex;align-items:center;gap:6px;background:#f8f9fb;border-radius:8px;padding:6px 12px;">
+<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#5b5b7a" stroke-width="2" stroke-linecap="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+<code>MessageSquare</code>
+</div>
+
+<div style="display:flex;align-items:center;gap:6px;background:#f8f9fb;border-radius:8px;padding:6px 12px;">
+<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#5b5b7a" stroke-width="2" stroke-linecap="round"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg>
+<code>Code</code>
+</div>
+
+<div style="display:flex;align-items:center;gap:6px;background:#f8f9fb;border-radius:8px;padding:6px 12px;">
+<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#5b5b7a" stroke-width="2" stroke-linecap="round"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
+<code>RefreshCw</code>
+</div>
+
+</div>
 
 **新增图标约定：**
 - 优先从已使用列表中选择，保持项目图标语言一致
 - 工具栏/卡片头 `size=18`，行内按钮 `size=14`，Modal 按钮 `size=16`
 - 拖拽手柄使用自定义 SVG（`viewBox="0 0 100 100"` 三线星号），非 Lucide
+- Save 图标按钮背景为 `var(--accent)` + 白色 SVG（其它图标为 `#5b5b7a`）
 
 ### 聚焦环
 
