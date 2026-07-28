@@ -31,9 +31,17 @@
     </div>
 
     <template #footer>
-      <button class="em-btn em-btn-cancel" @click="$emit('close')">✕ 取消</button>
-      <button class="em-btn em-btn-delete" @click="showDeleteConfirm = true">删除</button>
-      <button class="em-btn em-btn-save" @click="handleSave">保存</button>
+      <div class="em-footer">
+        <button class="em-icon-btn" title="取消" @click="$emit('close')">
+          <X :size="16" />
+        </button>
+        <div class="em-footer-right">
+          <button class="em-btn-save" @click="handleSave">保存</button>
+          <button class="em-icon-btn em-icon-btn--danger" title="删除" @click="showDeleteConfirm = true">
+            <Trash2 :size="16" />
+          </button>
+        </div>
+      </div>
     </template>
   </BaseDialog>
 
@@ -43,14 +51,17 @@
       <p class="dialog-danger-msg">确定要删除条目「{{ form.name }}」吗？此操作不可撤销。</p>
     </div>
     <template #footer>
-      <button class="em-btn em-btn-cancel" @click="showDeleteConfirm = false">取消</button>
-      <button class="em-btn em-btn-delete" @click="handleDelete">确定删除</button>
+      <div class="em-footer" style="justify-content: flex-end; gap: 10px;">
+        <button class="em-btn-save" @click="showDeleteConfirm = false" style="background: var(--bg-input); color: var(--text-secondary); border: 1px solid var(--border-light); box-shadow: none;">取消</button>
+        <button class="em-btn-save" @click="handleDelete" style="background: var(--danger); box-shadow: 0 1px 3px rgba(239,68,68,0.2);">确定删除</button>
+      </div>
     </template>
   </BaseDialog>
 </template>
 
 <script setup>
 import { reactive, ref, watch } from "vue";
+import { X, Trash2 } from "lucide-vue-next";
 import BaseDialog from "@/components/BaseDialog.vue";
 
 const props = defineProps({
@@ -155,38 +166,60 @@ function handleDelete() {
   box-shadow: var(--focus-ring);
 }
 
-/* 按钮 */
-.em-btn {
+/* footer */
+.em-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.em-footer-right {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+/* 图标按钮 — 复用 icon-btn 风格 */
+.em-icon-btn {
+  width: 32px;
+  height: 32px;
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-sm);
+  background: var(--bg-input);
+  color: var(--text-secondary);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  transition: all 0.15s;
+}
+.em-icon-btn:hover {
+  color: var(--text-primary);
+  border-color: var(--border);
+  background: var(--bg-input-hover);
+}
+.em-icon-btn--danger:hover {
+  color: var(--danger);
+  border-color: var(--danger);
+  background: var(--danger-bg);
+}
+
+/* 保存按钮 — 复用 btn-save 风格 */
+.em-btn-save {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
   padding: 8px 18px;
   border: none;
   border-radius: var(--radius-sm);
+  background: var(--accent);
+  color: #fff;
   font-size: 13px;
   font-weight: 600;
   cursor: pointer;
   font-family: inherit;
-  transition: all 0.15s;
-}
-.em-btn-cancel {
-  background: var(--bg-input);
-  color: var(--text-secondary);
-  border: 1px solid var(--border-light);
-}
-.em-btn-cancel:hover {
-  background: var(--bg-input-hover);
-  color: var(--text-primary);
-}
-.em-btn-delete {
-  background: var(--danger-bg);
-  color: var(--danger);
-  border: 1px solid var(--danger);
-}
-.em-btn-delete:hover {
-  background: #fde8e8;
-}
-.em-btn-save {
-  background: var(--accent);
-  color: #fff;
   box-shadow: 0 1px 3px rgba(79,110,246,0.2);
+  transition: all 0.15s;
 }
 .em-btn-save:hover {
   background: var(--accent-light);
