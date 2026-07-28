@@ -248,22 +248,22 @@
 
 项目统一使用 Lucide（`lucide-vue-next`）图标，`size` 统一为 `18`（工具栏/卡片头）或 `14`（条目行内按钮）或 `16`（Modal 按钮）。
 
-| 图标 | 导入名 | 使用位置 | size |
-|------|--------|---------|------|
-| `≡` | `Sidebar` | App.vue 工具栏 | 18 |
-| `🎨` | `Palette` | App.vue 工具栏、CssPresetEditor | 18 |
-| `⚙` | `SlidersHorizontal` | App.vue 工具栏、ParamPresetSelector | 18 |
-| `🔌` | `Plug` | App.vue 工具栏、SettingsView | 18 |
-| `🧩` | `Blocks` | App.vue 工具栏 | 18 |
-| `📋` | `List` | PromptEntryCard 卡片头 | 18 |
-| `✏️` | `Pencil` | PromptEntryItem 编辑按钮 | 14 |
-| `✕` | `X` | PromptEntryModal 取消按钮 | 16 |
-| `🗑` | `Trash2` | PromptEntryModal 删除按钮 | 16 |
-| `💾` | `Save` | PromptEntryModal 保存按钮 | 16 |
-| `⚙` | `Settings` | SettingsView 卡片头 | 18 |
-| `💬` | `MessageSquare` | SettingsView 模型卡片 | 18 |
-| `📝` | `Code` | SettingsView 响应格式卡片 | 18 |
-| `🔄` | `RefreshCw` | SettingsView 拉取模型按钮 | 16 |
+| 导入名 | 图标描述 | 使用位置 | size |
+|--------|---------|---------|------|
+| `Sidebar` | 侧边栏（三条横线） | App.vue 工具栏 | 18 |
+| `Palette` | 调色板 | App.vue 工具栏、CssPresetEditor | 18 |
+| `SlidersHorizontal` | 水平滑块 | App.vue 工具栏、ParamPresetSelector | 18 |
+| `Plug` | 插头 | App.vue 工具栏、SettingsView | 18 |
+| `Blocks` | 方块网格 | App.vue 工具栏 | 18 |
+| `List` | 列表（圆点+横线） | PromptEntryCard 卡片头 | 18 |
+| `Pencil` | 铅笔 | PromptEntryItem 编辑按钮 | 14 |
+| `X` | 叉号关闭 | PromptEntryModal 取消按钮 | 16 |
+| `Trash2` | 垃圾桶 | PromptEntryModal 删除按钮 | 16 |
+| `Save` | 软盘保存 | PromptEntryModal 保存按钮 | 16 |
+| `Settings` | 齿轮 | SettingsView 卡片头 | 18 |
+| `MessageSquare` | 消息气泡 | SettingsView 模型卡片 | 18 |
+| `Code` | 代码尖括号 | SettingsView 响应格式卡片 | 18 |
+| `RefreshCw` | 刷新圆圈 | SettingsView 拉取模型按钮 | 16 |
 
 **新增图标约定：**
 - 优先从已使用列表中选择，保持项目图标语言一致
