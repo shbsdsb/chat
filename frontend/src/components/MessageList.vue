@@ -4,6 +4,7 @@
       <MessageBubble :message="msg" />
       <MessageActions
         :message="msg"
+        :canEdit="canEditMessage(msg)"
         @edit="handleEdit"
         @replay="handleReplay"
         @prev="(id) => chatStore.switchVersion(id, -1)"
@@ -25,11 +26,13 @@ import MessageActions from "@/components/MessageActions.vue";
 const chatStore = useChatStore();
 const listRef = ref(null);
 
-function isLastAssistant(msg) {
+/** 只有该角色的最后一条消息才可编辑 */
+function canEditMessage(msg) {
+  if (msg.role !== "user" && msg.role !== "assistant") return false;
   const msgs = chatStore.messages;
-  if (msg.role !== "assistant") return false;
+  // 从后往前找第一条同角色消息的 ID 是否等于当前消息 ID
   for (let i = msgs.length - 1; i >= 0; i--) {
-    if (msgs[i].role === "assistant") return msgs[i].id === msg.id;
+    if (msgs[i].role === msg.role) return msgs[i].id === msg.id;
   }
   return false;
 }

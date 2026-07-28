@@ -35,9 +35,19 @@
         :dragging="dragging && dragIndex === idx"
         :style="{ transform: getDragTransform(idx) }"
         @toggle="handleToggle"
+        @edit="openEditModal(entry)"
         @drag-start="onItemMouseDown(entry, $event)"
       />
     </div>
+
+    <!-- 编辑 Modal -->
+    <PromptEntryModal
+      :visible="showEditModal"
+      :entry="editingEntry"
+      @close="showEditModal = false"
+      @save="handleEditSave"
+      @delete="handleEditDelete"
+    />
   </div>
 </template>
 
@@ -47,6 +57,7 @@ import { List } from "lucide-vue-next";
 import { usePromptEntriesStore } from "@/stores/promptEntries";
 import { useParamPresetsStore } from "@/stores/paramPresets";
 import PromptEntryItem from "@/components/PromptEntryItem.vue";
+import PromptEntryModal from "@/components/PromptEntryModal.vue";
 
 const store = usePromptEntriesStore();
 const paramStore = useParamPresetsStore();
@@ -55,6 +66,10 @@ const showAddInput = ref(false);
 const newName = ref("");
 const addInputRef = ref(null);
 const listRef = ref(null);
+
+// 编辑 Modal
+const showEditModal = ref(false);
+const editingEntry = ref({});
 
 // ---- 拖拽状态 ----
 const dragging = ref(false);
@@ -209,6 +224,21 @@ function cancelAdd() {
 
 async function handleToggle(entry) {
   await store.updateEntry(entry.id, { enabled: !entry.enabled });
+}
+
+function openEditModal(entry) {
+  editingEntry.value = { ...entry };
+  showEditModal.value = true;
+}
+
+async function handleEditSave({ name, content, role }) {
+  await store.updateEntry(editingEntry.value.id, { name, content, role });
+  showEditModal.value = false;
+}
+
+async function handleEditDelete(id) {
+  await store.deleteEntry(id);
+  showEditModal.value = false;
 }
 </script>
 

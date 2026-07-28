@@ -1,7 +1,7 @@
 <template>
-  <div class="message-actions">
-    <button class="action-btn" title="编辑" @click="$emit('edit', message.id)">✎</button>
-    <button class="action-btn replay-btn" title="重新生成" @click="$emit('replay', message.id)">
+  <div class="message-actions" :class="message.role">
+    <button v-if="canEdit" class="action-btn" title="编辑" @click="$emit('edit', message.id)">✎</button>
+    <button v-if="canEdit && message.role === 'assistant'" class="action-btn replay-btn" title="重新生成" @click="$emit('replay', message.id)">
       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.13-9.36L23 10"/></svg>
     </button>
     <template v-if="totalVersions > 1">
@@ -18,6 +18,7 @@ import { useChatStore } from "@/stores/chat";
 
 const props = defineProps({
   message: { type: Object, required: true },
+  canEdit: { type: Boolean, default: false },
 });
 defineEmits(["edit", "replay", "prev", "next"]);
 
@@ -36,8 +37,15 @@ const versionIndex = computed(() => {
   display: flex;
   gap: 4px;
   align-items: center;
-  padding-left: 4px;
   margin-bottom: 12px;
+}
+.message-actions.user {
+  justify-content: flex-end;
+  padding-right: 4px;
+}
+.message-actions.assistant {
+  justify-content: flex-start;
+  padding-left: 4px;
 }
 
 .action-btn {

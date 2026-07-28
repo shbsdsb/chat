@@ -120,6 +120,7 @@ function handleSend() {
 }
 .input-bar .input-wrapper:focus-within {
   border-color: var(--accent);
+  box-shadow: var(--shadow-sm), inset 0 0 0 1px var(--accent);
 }
 
 .input-bar .input-field {
@@ -134,6 +135,11 @@ function handleSend() {
   font-family: inherit;
   background: transparent;
   color: var(--text-primary);
+}
+.input-bar .input-field:focus,
+.input-bar .input-field:focus-visible {
+  outline: none;
+  box-shadow: none;
 }
 .input-bar .input-field::placeholder {
   color: var(--text-muted);
