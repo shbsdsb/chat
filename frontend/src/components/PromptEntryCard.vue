@@ -81,9 +81,8 @@ function getDragTransform(idx) {
 
   const h = itemHeight || getItemHeight();
   if (idx === di) {
-    // 被拖拽项跟随鼠标
-    const ty = (ti - di) * h + offsetY.value;
-    return `translateY(${ty}px)`;
+    // 被拖拽项只跟随鼠标偏移，不额外增加目标位置偏移
+    return `translateY(${offsetY.value}px)`;
   }
   // 其他项挤压
   if (di < ti && idx > di && idx <= ti) return `translateY(-${h}px)`;
