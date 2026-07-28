@@ -1,5 +1,7 @@
 # Chat — Vue 3 + Flask + Electron 桌面聊天应用
 
+> **⛔ 硬性规则：AI 禁止自行执行任何 Git 分支操作。** 包括但不限于：`git merge`、`git push`、`git pull`、创建 PR/MR、合并分支、推送分支、删除分支。这些操作**仅在用户明确文字要求时**才可执行。即使你认为"任务完成了应该推送"，也必须先询问用户。违反此规则是严重错误。
+
 ## Project
 前后端分离的 AI 聊天桌面应用。前端 Vue 3 SPA 经 Vite 构建、Electron 打包；后端 Flask REST API，通过 SSE 流式转发 OpenAI 兼容的 chat completions。数据以 JSON 文件存储在 `user_data/` 下（conversations.json 索引 + messages/<id>.json 消息 + settings.json 预设）。
 
@@ -21,7 +23,7 @@ npm run electron:build                     # 生产构建（vite build + electro
 
 # 后端测试
 cd backend
-python -m pytest                           # 自动使用 tmp_path 隔离数据，9 个测试文件 + conftest.py
+python -m pytest                           # 自动使用 tmp_path 隔离数据，10 个测试文件 + conftest.py
 ```
 
 ## Architecture
@@ -30,7 +32,9 @@ python -m pytest                           # 自动使用 tmp_path 隔离数据�
 chat/
 ├── run.bat                                # Windows 一键启动脚本
 ├── Plugin_Development_Guide.md             # 扩展开发指南（manifest/backend/frontend）
-├── UI_token.md                             # UI 设计 Token 与组件约定
+├── UI_token_new.md                         # UI 设计 Token v2（工具栏图标化 + API 设置重设计后）
+├── UI_token_old.md                         # UI 设计 Token v1（旧版）
+├── preview/                                 # 样式预览 HTML 文件
 ├── docs/                                   # 设计文档（API/前端/存储设计 + api/前端/重构规格/superpowers 子目录）
 ├── Goal/                                    # 产品目标与竞品差距分析（chatbox-gap, sillytavern-gap）
 ├── test_expand/                            # 扩展（插件）开发目录
@@ -47,7 +51,8 @@ chat/
 │   │   │   ├── messages.py                # 消息 CRUD（messages/<conv_id>.json）
 │   │   │   ├── settings.py                # API 预设 CRUD（settings.json）
 │   │   │   ├── css_presets.py             # CSS 预设（主题皮肤）CRUD
-│   │   │   └── param_presets.py           # 参数预设（temperature 等）CRUD
+│   │   │   ├── param_presets.py           # 参数预设（temperature 等）CRUD
+│   │   │   └── prompt_entries.py          # 提示词条目 CRUD（user_data/prompt_entries/<preset_id>.json）
 │   │   ├── extensions/                    # 扩展系统（插件框架）
 │   │   │   ├── __init__.py                # ExtensionManager — 生命周期、钩子调度
 │   │   │   ├── registry.py                # .registry.json 读写、启用/禁用
@@ -63,6 +68,7 @@ chat/
 │   │   │   ├── settings.py                # CRUD + /test（连通性）、/models（模型列表）、/default
 │   │   │   ├── css_presets.py             # CSS 预设（主题皮肤）CRUD
 │   │   │   ├── param_presets.py           # 参数预设（temperature 等）CRUD
+│   │   │   ├── prompt_entries.py          # 提示词条目 API（GET/POST/PUT/DELETE + /reorder）
 │   │   │   ├── extensions.py              # 扩展管理 API（安装/卸载/启用/禁用/列表/前端 JS 分发）
 │   │   │   └── example.py                 # /api/hello 示例
 │   │   ├── services/
@@ -72,7 +78,7 @@ chat/
 │   │   └── utils/
 │   │       ├── __init__.py                # 空文件（包标记）
 │   │       └── response.py                # ok() / fail() 统一响应 + 错误日志（脱敏 api_key）
-│   └── tests/                             # pytest（conftest.py monkeypatch DATA_DIR），9 个测试文件 + conftest.py
+│   └── tests/                             # pytest（conftest.py monkeypatch DATA_DIR），10 个测试文件 + conftest.py
 ├── frontend/
 │   ├── .npmrc                             # 淘宝 npm 镜像（国内加速）
 │   ├── vite.config.js                     # 读取 vite.config.json，配置代理 /api → 127.0.0.1:5000
@@ -95,6 +101,7 @@ chat/
 │       │   ├── extensions.js              # 扩展管理 API（安装/卸载/启用/禁用/列表）
 │       │   ├── cssPresets.js              # CSS 预设 API
 │       │   ├── paramPresets.js            # 参数预设 API
+│       │       ├── promptEntries.js           # 提示词条目 API
 │       │   └── constants.js               # 前端常量（扩展点 ID、事件名等）
 │       ├── composables/
 │       │   ├── useMarkdown.js              # MD 流式渲染入口（组合 markdown/ 子模块）
@@ -112,6 +119,7 @@ chat/
 │       │   ├── alert.js                   # Pinia — 全局弹窗提示
 │       │   ├── cssPresets.js              # Pinia — CSS 预设（主题皮肤）
 │       │   ├── paramPresets.js            # Pinia — 参数预设（temperature 等）
+│       │   ├── promptEntries.js           # Pinia — 提示词条目（与 paramPresets 联动、拖拽排序）
 │       │   └── extensions.js             # Pinia — 扩展安装状态、启用/禁用
 │       ├── components/                    # BaseDialog(通用弹窗基类), ConversationItem(编辑/删除按钮+弹窗),
 │       │                                  #   ConversationsDrawer(左→右可拖拽), InputBar, MessageBubble(MD渲染+代码块复制),
@@ -122,6 +130,8 @@ chat/
 │       │                                  #   ResponseFormatInput, WelcomeBanner,
 │       │                                  #   ExtensionManager(扩展安装/卸载/启用/禁用管理面板),
 │       │                                  #   ExtensionDetailDrawer(扩展详情抽屉)
+│       │                                  #   PromptEntryCard(提示词条目卡片+拖拽排序), PromptEntryItem(单行条目),
+│       │                                  #   PromptEntryModal(条目编辑Modal：名称/角色/内容)
 │       ├── views/
 │       │   ├── Home.vue                   # 聊天主页面（MessageList + InputBar）
 │       │   └── SettingsView.vue           # 设置页面
@@ -152,10 +162,23 @@ chat/
 - **扩展系统**：`extensions/ExtensionSlot.vue` 根据扩展点 ID 动态拉取并注入扩展 JS，`useExtensionApi.js` 向扩展暴露 Pinia stores 等 API。`ExtensionManager.vue` 提供安装/卸载/启用/禁用 UI。`api/constants.js` 定义扩展点 ID 和事件名常量。
 - **Electron**：主进程在 `electron/main.cjs`（CommonJS），预加载脚本 `preload.cjs`，`contextIsolation: true`。菜单根据系统语言自动选择中/英文。
 
-## Branch Rules
+## Branch Rules（硬性约束，AI 必须遵守）
+
+> ⛔ **这些规则对所有 AI Agent 具有最高优先级，任何情况下都不得自行违反。**
+
 - **禁止直接在 `main` 分支提交** — `.git/hooks/pre-commit` 已配置阻止 hook。
 - 所有开发在 `develop` 分支进行，`main` 仅通过 PR/MR 合并进入。
-- 当没有`develop`分支时，但需要进行提交时，需要向用户确认是否创建。
+- 当没有 `develop` 分支但需要提交时，**必须先向用户确认**是否创建，不得自行创建。
+- **AI 绝对禁止自行执行以下操作（即使用户没有明确禁止）：**
+  - `git merge` — 合并任意分支
+  - `git push` — 推送到远程仓库
+  - `git push --force` / `git push -f` — 强制推送
+  - `git pull` / `git pull --rebase` — 拉取远程变更
+  - 创建 Pull Request / Merge Request
+  - 删除本地或远程分支
+  - 任何修改远程仓库的操作
+- 上述操作**仅在用户给出明确文字指令**（如"请推送"、"合并到 main"、"创建 PR"）时才可执行。
+- 如果你的任务涉及到以上任何操作，**必须先停下来询问用户**，不得假设用户希望你做这些操作。
 
 ## Notes
 - 无 CI/CD 配置，无 linter 配置。
@@ -164,9 +187,11 @@ chat/
 - `database.py` 已删除；`models/` 为遗留目录，数据模型见 `docs/STORAGE.md`。新代码全部使用 `storage/` 包。残留的 `user_data/chat.db` 可安全忽略。
 - 会话命名从前端即时截取前 20 字符，排序用前端 `lastMessageAt` 字段实现发送瞬间重排。
 - v1.1.0 新增内联 HTML 渲染：`HtmlPreview.vue` 自动检测 Markdown 输出中的 HTML 代码块，提供代码/预览切换。
+- v1.3.0 新增提示词条目系统（Phase 1）: 条目CRUD+拖拽挤压排序+编辑Modal，数据归属参数预设。后端 prompt_entries/ 独立存储，数据结构 {id,name,content,role,enabled,order}。
+- preview/ 目录存放 UI 预览 HTML。
 - v1.2.0（backend）新增 CSS 预设（主题皮肤）、参数预设（temperature/top_p 等）、扩展系统（插件框架）。前端 package.json 版本为 1.1.0。
 - `Plugin_Development_Guide.md` 是扩展开发的完整指南（manifest.json 规范、backend.py 钩子、frontend 渲染函数）。
-- `UI_token.md` 定义了 UI 设计 Token（颜色、间距、圆角等）和组件约定，新 UI 代码应遵循。
+- `UI_token_new.md` 定义了 UI 设计 Token v2（颜色、间距、圆角等），新 UI 代码应遵循。
 - `docs/` 下包含各功能的设计规格和实现计划，新功能开发前建议先查阅。
 - `Goal/` 下包含产品目标与竞品差距分析文档。
 - `temp_check.js` 是临时检查脚本，不参与构建。
