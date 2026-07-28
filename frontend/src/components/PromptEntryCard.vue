@@ -136,6 +136,16 @@ function onMouseUp() {
   const di = dragIndex.value;
   const ti = targetIndex.value;
 
+  // 松手时禁用动画避免抖动
+  if (listRef.value) {
+    listRef.value.classList.add("pe-list--no-transition");
+  }
+
+  dragging.value = false;
+  dragIndex.value = -1;
+  targetIndex.value = -1;
+  offsetY.value = 0;
+
   if (di !== ti && di >= 0 && ti >= 0) {
     const data = [...store.entries];
     const [moved] = data.splice(di, 1);
@@ -143,10 +153,12 @@ function onMouseUp() {
     store.reorderEntries(data.map((e) => e.id));
   }
 
-  dragging.value = false;
-  dragIndex.value = -1;
-  targetIndex.value = -1;
-  offsetY.value = 0;
+  // 下一帧恢复动画
+  nextTick(() => {
+    if (listRef.value) {
+      listRef.value.classList.remove("pe-list--no-transition");
+    }
+  });
 }
 
 onBeforeUnmount(() => {
@@ -261,5 +273,10 @@ async function handleToggle(entry) {
   padding: 20px 0;
   color: var(--text-muted, #9ca3af);
   font-size: 13px;
+}
+
+/* 松手时禁用子组件的 transition 避免抖动 */
+.pe-list--no-transition :deep(.pe-item) {
+  transition: none !important;
 }
 </style>
