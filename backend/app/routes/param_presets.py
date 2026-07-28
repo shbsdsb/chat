@@ -7,6 +7,7 @@ from app.storage import (
     update_param_preset, delete_param_preset,
     get_default_param_preset, set_default_param_preset,
 )
+from app.storage.prompt_entries import delete_preset_entries
 from app.utils.response import ok, fail
 
 
@@ -115,6 +116,7 @@ def delete_param_preset_route(preset_id):
         return fail(409, "不能删除默认参数预设，请先切换默认预设", request)
 
     delete_param_preset(preset_id)
+    delete_preset_entries(preset_id)
     return ok()
 
 
