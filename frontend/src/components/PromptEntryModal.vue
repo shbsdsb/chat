@@ -36,10 +36,10 @@
           <X :size="16" />
         </button>
         <div class="em-footer-right">
-          <button class="btn-save" @click="handleSave" title="保存" style="padding: 8px 12px;"><Save :size="16" /></button>
           <button class="em-icon-btn em-icon-btn--danger" title="删除" @click="showDeleteConfirm = true">
             <Trash2 :size="16" />
           </button>
+          <button class="btn-save" @click="handleSave" title="保存" style="padding: 8px;"><Save :size="16" /></button>
         </div>
       </div>
     </template>
@@ -175,7 +175,7 @@ function handleDelete() {
 .em-footer-right {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 6px;
 }
 
 /* 图标按钮 — 复用 icon-btn 风格 */
