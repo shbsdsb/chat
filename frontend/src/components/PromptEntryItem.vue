@@ -61,6 +61,10 @@ function onDragEnd() {
 
 function onDragOver(e) {
   e.dataTransfer.dropEffect = "move";
+  // 先清除所有指示线，再给当前添加
+  document.querySelectorAll(".pe-item--drop-target").forEach((el) => {
+    el.classList.remove("pe-item--drop-target");
+  });
   e.currentTarget.classList.add("pe-item--drop-target");
 }
 
