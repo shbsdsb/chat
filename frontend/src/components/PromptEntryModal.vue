@@ -35,12 +35,10 @@
         <button class="em-icon-btn" title="取消" @click="$emit('close')">
           <X :size="16" />
         </button>
-        <div class="em-footer-right">
-          <button class="em-icon-btn em-icon-btn--danger" title="删除" @click="showDeleteConfirm = true">
-            <Trash2 :size="16" />
-          </button>
-          <button class="btn-save" @click="handleSave" title="保存" style="padding: 8px;"><Save :size="16" /></button>
-        </div>
+        <button class="em-icon-btn em-icon-btn--danger" title="删除" @click="showDeleteConfirm = true">
+          <Trash2 :size="16" />
+        </button>
+        <button class="btn-save" @click="handleSave" title="保存" style="padding: 8px;"><Save :size="16" /></button>
       </div>
     </template>
   </BaseDialog>
@@ -51,7 +49,7 @@
       <p class="dialog-danger-msg">确定要删除条目「{{ form.name }}」吗？此操作不可撤销。</p>
     </div>
     <template #footer>
-      <div class="em-footer" style="justify-content: flex-end; gap: 10px;">
+      <div class="em-footer">
         <button class="btn-save" @click="showDeleteConfirm = false" style="background: var(--bg-input); color: var(--text-secondary); border: 1px solid var(--border-light); box-shadow: none;">取消</button>
         <button class="btn-save" @click="handleDelete" style="background: var(--danger); box-shadow: 0 1px 3px rgba(239,68,68,0.2);">确定删除</button>
       </div>
@@ -170,12 +168,8 @@ function handleDelete() {
 .em-footer {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-}
-.em-footer-right {
-  display: flex;
-  align-items: center;
-  gap: 6px;
+  justify-content: flex-end;
+  gap: 16px;
 }
 
 /* 图标按钮 — 复用 icon-btn 风格 */
