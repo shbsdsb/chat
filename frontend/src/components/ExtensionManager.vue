@@ -1,4 +1,5 @@
 <template>
+  <div class="ext-manager-root">
   <div class="card">
     <!-- Header -->
     <div class="card-header">
@@ -124,6 +125,7 @@
   </BaseDialog>
 
   <ExtensionDetailDrawer />
+  </div>
 </template>
 
 <script setup>
@@ -190,6 +192,8 @@ function onUpdate(ext) { store.update(ext.id); }
 </script>
 
 <style scoped>
+.ext-manager-root { display: contents; }
+
 /* ——— 卡片 ——— */
 .card { background: var(--bg-primary); border: 1px solid var(--border); border-radius: var(--radius-lg); box-shadow: var(--shadow-sm); padding: 16px 18px; display: flex; flex-direction: column; }
 .card-header { display: flex; align-items: center; gap: 8px; margin-bottom: 12px; }
