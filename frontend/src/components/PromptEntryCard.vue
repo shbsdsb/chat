@@ -42,7 +42,7 @@
 </template>
 
 <script setup>
-import { ref, watch, nextTick, computed, onBeforeUnmount } from "vue";
+import { ref, watch, nextTick, onBeforeUnmount } from "vue";
 import { List } from "lucide-vue-next";
 import { usePromptEntriesStore } from "@/stores/promptEntries";
 import { useParamPresetsStore } from "@/stores/paramPresets";
@@ -136,9 +136,15 @@ function onMouseUp() {
   const di = dragIndex.value;
   const ti = targetIndex.value;
 
-  // 松手时禁用动画避免抖动
-  if (listRef.value) {
-    listRef.value.classList.add("pe-list--no-transition");
+  // 直接操作 DOM：冻结所有条目，瞬间落位
+  const items = listRef.value?.querySelectorAll(".pe-item");
+  if (items) {
+    items.forEach((el) => {
+      el.style.transition = "none";
+      el.style.transform = "translateY(0)";
+    });
+    // 强制同步重排，确保样式立即生效
+    void listRef.value.offsetHeight;
   }
 
   dragging.value = false;
@@ -153,11 +159,16 @@ function onMouseUp() {
     store.reorderEntries(data.map((e) => e.id));
   }
 
-  // 下一帧恢复动画
-  nextTick(() => {
-    if (listRef.value) {
-      listRef.value.classList.remove("pe-list--no-transition");
-    }
+  // 下一帧恢复 transition
+  requestAnimationFrame(() => {
+    requestAnimationFrame(() => {
+      if (items) {
+        items.forEach((el) => {
+          el.style.transition = "";
+          el.style.transform = "";
+        });
+      }
+    });
   });
 }
 
@@ -273,10 +284,5 @@ async function handleToggle(entry) {
   padding: 20px 0;
   color: var(--text-muted, #9ca3af);
   font-size: 13px;
-}
-
-/* 松手时禁用子组件的 transition 避免抖动 */
-.pe-list--no-transition :deep(.pe-item) {
-  transition: none !important;
 }
 </style>
