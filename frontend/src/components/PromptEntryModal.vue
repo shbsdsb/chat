@@ -36,7 +36,7 @@
           <X :size="16" />
         </button>
         <div class="em-footer-right">
-          <button class="em-btn-save" @click="handleSave">保存</button>
+          <button class="btn-save" @click="handleSave">保存</button>
           <button class="em-icon-btn em-icon-btn--danger" title="删除" @click="showDeleteConfirm = true">
             <Trash2 :size="16" />
           </button>
@@ -52,8 +52,8 @@
     </div>
     <template #footer>
       <div class="em-footer" style="justify-content: flex-end; gap: 10px;">
-        <button class="em-btn-save" @click="showDeleteConfirm = false" style="background: var(--bg-input); color: var(--text-secondary); border: 1px solid var(--border-light); box-shadow: none;">取消</button>
-        <button class="em-btn-save" @click="handleDelete" style="background: var(--danger); box-shadow: 0 1px 3px rgba(239,68,68,0.2);">确定删除</button>
+        <button class="btn-save" @click="showDeleteConfirm = false" style="background: var(--bg-input); color: var(--text-secondary); border: 1px solid var(--border-light); box-shadow: none;">取消</button>
+        <button class="btn-save" @click="handleDelete" style="background: var(--danger); box-shadow: 0 1px 3px rgba(239,68,68,0.2);">确定删除</button>
       </div>
     </template>
   </BaseDialog>
@@ -204,8 +204,7 @@ function handleDelete() {
   background: var(--danger-bg);
 }
 
-/* 保存按钮 — 复用 btn-save 风格 */
-.em-btn-save {
+.btn-save {
   display: inline-flex;
   align-items: center;
   gap: 6px;
@@ -221,9 +220,15 @@ function handleDelete() {
   box-shadow: 0 1px 3px rgba(79,110,246,0.2);
   transition: all 0.15s;
 }
-.em-btn-save:hover {
+.btn-save:hover:not(:disabled) {
   background: var(--accent-light);
   transform: translateY(-1px);
   box-shadow: 0 2px 6px rgba(79,110,246,0.3);
+}
+.btn-save:disabled {
+  opacity: 0.45;
+  cursor: default;
+  transform: none;
+  box-shadow: none;
 }
 </style>
