@@ -43,10 +43,10 @@
         </template>
         <Transition name="drawer-slide" mode="out-in">
           <SettingsView v-if="activeDrawer === 'api'" key="api" @saved="activeDrawer = null" />
-          <template v-else-if="activeDrawer === 'presets'" key="presets">
+          <div v-else-if="activeDrawer === 'presets'" key="presets">
             <ParamPresetSelector @saved="activeDrawer = null" />
             <PromptEntryCard />
-          </template>
+          </div>
           <CssPresetEditor v-else-if="activeDrawer === 'css'" key="css" />
           <ExtensionManager v-else-if="activeDrawer === 'extensions'" key="extensions" />
         </Transition>
