@@ -266,12 +266,12 @@
 </div>
 
 <div style="display:flex;align-items:center;gap:6px;background:#f8f9fb;border-radius:8px;padding:6px 12px;">
-<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#5b5b7a" stroke-width="2" stroke-linecap="round"><path d="M12 22v-5"/><path d="M9 8V2"/><path d="M15 8V2"/><path d="M18 8v-.5a3 3 0 0 0-3-3H9a3 3 0 0 0-3 3V8"/><path d="M5 8h14a2 2 0 0 1 2 2v2a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-2a2 2 0 0 1 2-2z"/></svg>
+<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#5b5b7a" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22v-5"/><path d="M15 8V2"/><path d="M17 8a1 1 0 0 1 1 1v4a4 4 0 0 1-4 4h-4a4 4 0 0 1-4-4V9a1 1 0 0 1 1-1z"/><path d="M9 8V2"/></svg>
 <code>Plug</code>
 </div>
 
 <div style="display:flex;align-items:center;gap:6px;background:#f8f9fb;border-radius:8px;padding:6px 12px;">
-<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#5b5b7a" stroke-width="2" stroke-linecap="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
+<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#5b5b7a" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 22V7a1 1 0 0 0-1-1H4a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-5a1 1 0 0 0-1-1H2"/><rect x="14" y="2" width="8" height="8" rx="1"/></svg>
 <code>Blocks</code>
 </div>
 
@@ -296,7 +296,7 @@
 </div>
 
 <div style="display:flex;align-items:center;gap:6px;background:#4f6ef6;border-radius:8px;padding:6px 12px;">
-<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
+<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15.2 3a2 2 0 0 1 1.4.6l3.8 3.8a2 2 0 0 1 .6 1.4V19a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2z"/><path d="M17 21v-7a1 1 0 0 0-1-1H8a1 1 0 0 0-1 1v7"/><path d="M7 3v4a1 1 0 0 0 1 1h7"/></svg>
 <code>Save</code>
 </div>
 
