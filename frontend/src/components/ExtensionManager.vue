@@ -189,7 +189,7 @@ function onToggle(ext) { store.toggle(ext.id, !ext.enabled); }
 function onUpdate(ext) { store.update(ext.id); }
 </script>
 
-<style>
+<style scoped>
 /* ——— 卡片 ——— */
 .card { background: var(--bg-primary); border: 1px solid var(--border); border-radius: var(--radius-lg); box-shadow: var(--shadow-sm); padding: 16px 18px; display: flex; flex-direction: column; }
 .card-header { display: flex; align-items: center; gap: 8px; margin-bottom: 12px; }

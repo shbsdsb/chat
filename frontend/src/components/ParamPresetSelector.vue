@@ -136,7 +136,7 @@ function cancelDelete() { showDeleteDialog.value = false; }
 function showToast(msg) { toastMsg.value = msg; clearTimeout(toastTimer); toastTimer = setTimeout(() => { toastMsg.value = ""; }, 2000); }
 </script>
 
-<style>
+<style scoped>
 .card {
   background: var(--bg-primary); border: 1px solid var(--border);
   border-radius: var(--radius-lg); box-shadow: var(--shadow-sm);
