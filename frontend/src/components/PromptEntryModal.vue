@@ -36,7 +36,7 @@
           <X :size="16" />
         </button>
         <div class="em-footer-right">
-          <button class="btn-save" @click="handleSave"><Save :size="16" /> 保存</button>
+          <button class="btn-save" @click="handleSave" title="保存" style="padding: 8px 12px;"><Save :size="16" /></button>
           <button class="em-icon-btn em-icon-btn--danger" title="删除" @click="showDeleteConfirm = true">
             <Trash2 :size="16" />
           </button>
