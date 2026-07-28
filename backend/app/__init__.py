@@ -3,7 +3,7 @@ import os
 from flask import Flask
 from flask_cors import CORS
 
-from app.storage import init_storage
+from app.storage import init_storage, DATA_DIR
 
 
 def create_app():
@@ -35,6 +35,7 @@ def create_app():
     import app.routes.param_presets  # noqa — 注册 /api/param-presets 系列路由
     import app.routes.css_presets   # noqa — 注册 /api/css-presets 系列路由
     import app.routes.extensions   # noqa — 注册 /api/extensions 系列路由
+    import app.routes.prompt_entries  # noqa: F401 — 注册 /api/prompt-entries 系列路由
 
     # ── 扩展系统初始化（必须在 register_blueprint 之前，以便扩展注册 API 路由）──
     from app.extensions import get_extension_manager
@@ -49,6 +50,7 @@ def create_app():
     from app.storage.param_presets import init_param_presets
     from app.storage.css_presets import init_css_presets
     init_param_presets()  # 初始化参数预设存储（幂等）
+    os.makedirs(os.path.join(DATA_DIR, "prompt_entries"), exist_ok=True)
     init_css_presets()    # 初始化CSS预设存储（幂等）
 
     return flask_app
