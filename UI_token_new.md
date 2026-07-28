@@ -1,6 +1,6 @@
 # UI Token v2 — 设计规范（工具栏 & API 设置页面改造后）
 
-> **最后更新**：2026-07-27  
+> **最后更新**：2026-07-29  
 > **基于**：`UI_token.md`（v1）+ 工具栏图标化 + API 设置页面重设计  
 > **Token 文件**：`frontend/src/assets/tokens.css`
 
@@ -243,6 +243,32 @@
 | `--radius-md` | `10px` | 卡片、面板、会话项 |
 | `--radius-lg` | `16px` | 消息气泡、API 设置卡片 |
 | `--radius-xl` | `28px` | 输入框 wrapper |
+
+### 已使用图标（Lucide）
+
+项目统一使用 Lucide（`lucide-vue-next`）图标，`size` 统一为 `18`（工具栏/卡片头）或 `14`（条目行内按钮）或 `16`（Modal 按钮）。
+
+| 图标 | 导入名 | 使用位置 | size |
+|------|--------|---------|------|
+| `≡` | `Sidebar` | App.vue 工具栏 | 18 |
+| `🎨` | `Palette` | App.vue 工具栏、CssPresetEditor | 18 |
+| `⚙` | `SlidersHorizontal` | App.vue 工具栏、ParamPresetSelector | 18 |
+| `🔌` | `Plug` | App.vue 工具栏、SettingsView | 18 |
+| `🧩` | `Blocks` | App.vue 工具栏 | 18 |
+| `📋` | `List` | PromptEntryCard 卡片头 | 18 |
+| `✏️` | `Pencil` | PromptEntryItem 编辑按钮 | 14 |
+| `✕` | `X` | PromptEntryModal 取消按钮 | 16 |
+| `🗑` | `Trash2` | PromptEntryModal 删除按钮 | 16 |
+| `💾` | `Save` | PromptEntryModal 保存按钮 | 16 |
+| `⚙` | `Settings` | SettingsView 卡片头 | 18 |
+| `💬` | `MessageSquare` | SettingsView 模型卡片 | 18 |
+| `📝` | `Code` | SettingsView 响应格式卡片 | 18 |
+| `🔄` | `RefreshCw` | SettingsView 拉取模型按钮 | 16 |
+
+**新增图标约定：**
+- 优先从已使用列表中选择，保持项目图标语言一致
+- 工具栏/卡片头 `size=18`，行内按钮 `size=14`，Modal 按钮 `size=16`
+- 拖拽手柄使用自定义 SVG（`viewBox="0 0 100 100"` 三线星号），非 Lucide
 
 ### 聚焦环
 
