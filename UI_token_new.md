@@ -243,6 +243,25 @@
 | `--radius-md` | `10px` | 卡片、面板、会话项 |
 | `--radius-lg` | `16px` | 消息气泡、API 设置卡片 |
 | `--radius-xl` | `28px` | 输入框 wrapper |
+| `--radius-full` | `50%` | 发送按钮（圆形） |
+
+### 间距
+
+| Token | 值 | 用途 |
+|------|-----|------|
+| `--spacing-xs` | `4px` | 图标与文字间距 |
+| `--spacing-sm` | `8px` | 按钮组 gap、紧凑型内部间距 |
+| `--spacing-md` | `12px` | 列表项间距、输入栏内边距 |
+| `--spacing-lg` | `16px` | 抽屉标题内边距、组件间距 |
+| `--spacing-xl` | `24px` | 抽屉 body 内边距、页面级 padding |
+
+### 玻璃态
+
+| Token | 值 | 用途 |
+|------|-----|------|
+| `--glass-bg` | `rgba(255,255,255,0.7)` | 玻璃态背景 |
+| `--glass-border` | `rgba(0,0,0,0.06)` | 玻璃态边框 |
+| `--glass-blur` | `12px` | 玻璃态模糊量 |
 
 ### 已使用图标（Lucide）
 
@@ -369,7 +388,105 @@
 
 ---
 
-## 五、关键设计决策
+## 五、组件约定
+
+> 自定义 CSS 通过 `_injectCss()` 注入 `<style id="custom-css">`，自动追加 `!important`。新组件必须遵守以下规则。
+
+### 5.1 命名与结构
+
+| # | 规则 |
+|---|------|
+| 1 | 每个用户可见元素必须有稳定的 class 名，不能只靠 Vue scoped hash |
+| 2 | class 命名遵循 BEM 风格：`conv-item`、`conv-item.active`、`btn-send` |
+| 3 | 顶级容器用组件名作 class：`.prompt-entry-card`、`.prompt-entry-item` |
+| 4 | 颜色/边框必须来自 Token，不硬编码颜色值 |
+| 5 | 抽屉内容组件统一通过 `SettingsDrawer` 外壳管理，不自行实现 drawer-panel |
+
+### 5.2 组件模板
+
+```vue
+<template>
+  <div class="my-component">
+    <div class="my-component-header">
+      <h3>标题</h3>
+      <button class="my-component-close" @click="$emit('close')">✕</button>
+    </div>
+    <div class="my-component-body"><!-- 内容 --></div>
+  </div>
+</template>
+
+<style scoped>
+.my-component { /* ... */ }
+</style>
+```
+
+### 5.3 禁止事项
+
+| ❌ | 原因 |
+|----|------|
+| 只用 scoped 而不用稳定的 class 名 | 用户 CSS 无法选中 |
+| 硬编码独特色彩 | 破坏主题预设兼容 |
+| 内联 `style="..."` | 无法被自定义 CSS 覆盖 |
+
+---
+
+## 六、组件库存
+
+### 外壳组件
+
+| 组件 | 职责 | 关键 class |
+|------|------|------------|
+| `App.vue` | 全局布局：top-bar + app-body + 抽屉 | `.top-bar`, `.top-btn`, `.main-area` |
+| `SettingsDrawer.vue` | 右侧可拖拽抽屉外壳 | `.drawer-panel`, `.drawer-inner` |
+| `ConversationsDrawer.vue` | 左侧会话列表 | `.drawer-panel`, `.conv-item` |
+
+### 聊天组件
+
+| 组件 | 职责 | 关键 class |
+|------|------|------------|
+| `MessageBubble.vue` | 消息气泡渲染 | `.bubble-row`, `.bubble`, `.bubble-text` |
+| `MessageList.vue` | 消息列表容器 | `.message-list` |
+| `InputBar.vue` | 输入栏 | `.input-bar`, `.input-wrapper`, `.btn-send` |
+| `ConversationItem.vue` | 会话列表单项 | `.conv-item`, `.conv-title` |
+
+### 设置/预设组件
+
+| 组件 | 职责 | 关键 class |
+|------|------|------------|
+| `SettingsView.vue` | API 设置页 | `.card`, `.form-row`, `.status-bar` |
+| `PresetSelector.vue` | API 预设选择器 | — |
+| `ParamPresetSelector.vue` | 参数预设（temperature 等） | `.card`, `.btn-save`, `.icon-btn` |
+| `CssPresetEditor.vue` | CSS 预设编辑器 | `.css-editor`, `.css-textarea` |
+| `PromptEntryCard.vue` | 提示词条目卡片 | `.pe-item`, `.pe-item__handle` |
+| `PromptEntryItem.vue` | 单行条目（拖拽排序） | `.pe-item`, `.pe-item__name` |
+| `PromptEntryModal.vue` | 条目编辑 Modal | `.em-input`, `.em-textarea`, `.btn-save` |
+
+### 弹窗/通用组件
+
+| 组件 | 职责 | 关键 class |
+|------|------|------------|
+| `BaseDialog.vue` | 通用弹窗基类 | `.dialog-overlay`, `.dialog-box` |
+| `AlertDialog.vue` | 全局提示弹窗 | `.alert-dialog` |
+| `ModelSelector.vue` | 模型下拉选择器 | — |
+| `HtmlPreview.vue` | HTML 预览 iframe | `.html-preview` |
+| `ExtensionManager.vue` | 扩展管理面板 | — |
+
+---
+
+## 七、主题预设
+
+| 名称 | 风格 | 核心色 |
+|------|------|--------|
+| 默认 | 原生样式 | — |
+| 暗夜护眼 | 深色模式 | `#1a1b23` 底 / `#21222c` 面板 / `#4a6fbf` 强调 |
+| 日间暖阳 | 暖色模式 | `#faf7f2` 底 / `#7a9e6b` 强调 / `#d4c9b8` 边框 |
+| 小清新 | 薄荷模式 | `#f5faf7` 底 / `#7cba8a` 强调 / `#c8e0ce` 边框 |
+
+预设文件：`user_data/css_presets.json`，通过 `init_css_presets()` 自动创建。
+
+---
+
+## 八、关键设计决策
 
 | 决策 | 选择 | 原因 |
 |------|------|------|
@@ -383,7 +500,7 @@
 
 ---
 
-## 六、新增依赖
+## 九、新增依赖
 
 | 包 | 版本 | 用途 |
 |----|------|------|
@@ -391,10 +508,11 @@
 
 ---
 
-## 七、与原 UI_token.md 的关系
+## 十、版本历史
 
-`UI_token.md`（v1）定义了初始 Token 和组件约定。本次两项改造后：
+| 版本 | 日期 | 变更 |
+|------|------|------|
+| v2 | 2026-07-27 | 工具栏图标化 + API 设置页面重设计，Token 迁移至 `tokens.css` |
+| v2.1 | 2026-07-29 | 新增间距/玻璃态 Token、Lucide 图标清单、组件约定与库存、主题预设；合并 `UI_token_old.md`，**本文件为唯一权威参考** |
 
-- **Token 已迁移**：`:root` 变量从 `App.vue` 移至 `tokens.css`，并新增 15+ Token（`--bg-input`、`--focus-ring`、`--status-dot-*` 等）
-- **组件约定不变**：BEM 命名、非 scoped 暴露 class、抽屉统一架构等规则仍然有效
-- **本文件为当前权威参考**：后续开发以本文件和 `tokens.css` 为准
+> **旧文件 `UI_token_old.md` 已归档，不再维护。** 所有开发以本文件和 `tokens.css` 为准。
