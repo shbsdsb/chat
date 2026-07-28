@@ -1,0 +1,86 @@
+import os
+import uuid
+from .conversations import _read_json, _write_json, _lock, DATA_DIR
+
+PROMPT_ENTRIES_DIR = os.path.join(DATA_DIR, "prompt_entries")
+
+
+def _get_file_path(preset_id):
+    return os.path.join(PROMPT_ENTRIES_DIR, f"{preset_id}.json")
+
+
+def _ensure_dir():
+    os.makedirs(PROMPT_ENTRIES_DIR, exist_ok=True)
+
+
+def get_entries(preset_id):
+    """返回指定预设的所有提示词条目，按 order 排序。文件不存在返回 []。"""
+    _ensure_dir()
+    filepath = _get_file_path(preset_id)
+    if not os.path.exists(filepath):
+        return []
+    entries = _read_json(filepath)
+    entries.sort(key=lambda e: e.get("order", 0))
+    return entries
+
+
+def create_entry(preset_id, name):
+    """创建新条目，order = 当前最大 + 1，enabled 默认 True。"""
+    with _lock:
+        entries = get_entries(preset_id)
+        max_order = max((e.get("order", 0) for e in entries), default=-1)
+        entry = {
+            "id": str(uuid.uuid4()),
+            "name": name.strip(),
+            "enabled": True,
+            "order": max_order + 1,
+        }
+        entries.append(entry)
+        _ensure_dir()
+        _write_json(_get_file_path(preset_id), entries)
+        return entry
+
+
+def update_entry(preset_id, entry_id, data):
+    """更新条目字段（name / enabled）。"""
+    with _lock:
+        entries = get_entries(preset_id)
+        for entry in entries:
+            if entry["id"] == entry_id:
+                if "name" in data:
+                    entry["name"] = data["name"].strip()
+                if "enabled" in data:
+                    entry["enabled"] = bool(data["enabled"])
+                _write_json(_get_file_path(preset_id), entries)
+                return entry
+        return None
+
+
+def delete_entry(preset_id, entry_id):
+    """删除条目并重整 order 为连续值。"""
+    with _lock:
+        entries = get_entries(preset_id)
+        entries = [e for e in entries if e["id"] != entry_id]
+        for i, entry in enumerate(entries):
+            entry["order"] = i
+        _write_json(_get_file_path(preset_id), entries)
+        return True
+
+
+def reorder_entries(preset_id, id_order_list):
+    """按传入的 id 列表批量写入新 order。"""
+    with _lock:
+        entries = get_entries(preset_id)
+        id_to_entry = {e["id"]: e for e in entries}
+        for new_order, entry_id in enumerate(id_order_list):
+            if entry_id in id_to_entry:
+                id_to_entry[entry_id]["order"] = new_order
+        entries.sort(key=lambda e: e.get("order", 0))
+        _write_json(_get_file_path(preset_id), entries)
+
+
+def delete_preset_entries(preset_id):
+    """删除整个预设的条目文件。"""
+    filepath = _get_file_path(preset_id)
+    if os.path.exists(filepath):
+        os.remove(filepath)

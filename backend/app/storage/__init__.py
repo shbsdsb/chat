@@ -57,3 +57,13 @@ from .css_presets import (
     set_default_css_preset,
     init_css_presets,
 )
+
+# prompt_entries
+from .prompt_entries import (
+    get_entries,
+    create_entry,
+    update_entry,
+    delete_entry,
+    reorder_entries,
+    delete_preset_entries,
+)
