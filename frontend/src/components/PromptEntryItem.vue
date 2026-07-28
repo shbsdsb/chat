@@ -53,6 +53,10 @@ function onDragStart(e) {
 
 function onDragEnd() {
   isDragging.value = false;
+  // 清理所有残留的 drop-target 指示线
+  document.querySelectorAll(".pe-item--drop-target").forEach((el) => {
+    el.classList.remove("pe-item--drop-target");
+  });
 }
 
 function onDragOver(e) {
