@@ -43,7 +43,10 @@
         </template>
         <Transition name="drawer-slide" mode="out-in">
           <SettingsView v-if="activeDrawer === 'api'" key="api" @saved="activeDrawer = null" />
-          <ParamPresetSelector v-else-if="activeDrawer === 'presets'" key="presets" @saved="activeDrawer = null" />
+          <template v-else-if="activeDrawer === 'presets'" key="presets">
+            <ParamPresetSelector @saved="activeDrawer = null" />
+            <PromptEntryCard />
+          </template>
           <CssPresetEditor v-else-if="activeDrawer === 'css'" key="css" />
           <ExtensionManager v-else-if="activeDrawer === 'extensions'" key="extensions" />
         </Transition>
@@ -60,6 +63,7 @@ import ConversationsDrawer from "@/components/ConversationsDrawer.vue";
 import SettingsDrawer from "@/components/SettingsDrawer.vue";
 import SettingsView from "@/views/SettingsView.vue";
 import ParamPresetSelector from "@/components/ParamPresetSelector.vue";
+import PromptEntryCard from "@/components/PromptEntryCard.vue";
 import CssPresetEditor from "@/components/CssPresetEditor.vue";
 import AlertDialog from "@/components/AlertDialog.vue";
 import ExtensionManager from "@/components/ExtensionManager.vue";
