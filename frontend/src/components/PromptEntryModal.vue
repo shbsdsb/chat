@@ -36,7 +36,7 @@
           <X :size="16" />
         </button>
         <div class="em-footer-right">
-          <button class="btn-save" @click="handleSave">保存</button>
+          <button class="btn-save" @click="handleSave"><Save :size="16" /> 保存</button>
           <button class="em-icon-btn em-icon-btn--danger" title="删除" @click="showDeleteConfirm = true">
             <Trash2 :size="16" />
           </button>
@@ -61,7 +61,7 @@
 
 <script setup>
 import { reactive, ref, watch } from "vue";
-import { X, Trash2 } from "lucide-vue-next";
+import { X, Trash2, Save } from "lucide-vue-next";
 import BaseDialog from "@/components/BaseDialog.vue";
 
 const props = defineProps({
