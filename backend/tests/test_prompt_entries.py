@@ -58,6 +58,8 @@ class TestPromptEntriesCRUD:
         entry = data["data"]
         assert entry["name"] == "🏃 测试角色"
         assert entry["enabled"] is True
+        assert entry["content"] == ""
+        assert entry["role"] is None
         assert "id" in entry
         assert "order" in entry
 
@@ -106,6 +108,21 @@ class TestPromptEntriesCRUD:
         entry = resp.get_json()["data"]
         assert entry["name"] == "新名称"
         assert entry["enabled"] is False
+
+    def test_update_content_role(self, test_app):
+        """更新条目内容与角色。"""
+        preset_id = _create_preset(test_app)
+        resp = test_app.post("/api/prompt-entries", json={"preset_id": preset_id, "name": "测试"})
+        entry_id = resp.get_json()["data"]["id"]
+
+        resp = test_app.put(
+            f"/api/prompt-entries/{entry_id}",
+            json={"preset_id": preset_id, "content": "你是助手", "role": "system"},
+        )
+        assert resp.status_code == 200
+        entry = resp.get_json()["data"]
+        assert entry["content"] == "你是助手"
+        assert entry["role"] == "system"
 
     def test_delete_entry(self, test_app):
         """删除条目成功。"""

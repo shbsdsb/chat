@@ -32,6 +32,8 @@ def create_entry(preset_id, name):
         entry = {
             "id": str(uuid.uuid4()),
             "name": name.strip(),
+            "content": "",
+            "role": None,
             "enabled": True,
             "order": max_order + 1,
         }
