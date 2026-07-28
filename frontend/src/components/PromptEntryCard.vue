@@ -27,24 +27,22 @@
     </div>
 
     <!-- 条目列表 -->
-    <div v-if="store.entries.length > 0" class="pe-list">
+    <div v-if="store.entries.length > 0" class="pe-list" ref="listRef">
       <PromptEntryItem
-        v-for="entry in store.entries"
+        v-for="(entry, idx) in store.entries"
         :key="entry.id"
         :entry="entry"
-        :style="getItemStyle(entry)"
+        :dragging="dragging && dragIndex === idx"
+        :style="{ transform: getDragTransform(idx) }"
         @toggle="handleToggle"
-        @drag-start="onDragStart"
-        @drag-over="onDragOver"
-        @drag-end="resetDrag"
-        @drop="onDrop"
+        @drag-start="onItemMouseDown(entry, $event)"
       />
     </div>
   </div>
 </template>
 
 <script setup>
-import { ref, watch, nextTick } from "vue";
+import { ref, watch, nextTick, computed, onBeforeUnmount } from "vue";
 import { List } from "lucide-vue-next";
 import { usePromptEntriesStore } from "@/stores/promptEntries";
 import { useParamPresetsStore } from "@/stores/paramPresets";
@@ -56,13 +54,103 @@ const paramStore = useParamPresetsStore();
 const showAddInput = ref(false);
 const newName = ref("");
 const addInputRef = ref(null);
-const draggedId = ref(null);
-const overTargetId = ref(null);
-const overPosition = ref("after");
+const listRef = ref(null);
 
-const ITEM_HEIGHT = 49;
+// ---- 拖拽状态 ----
+const dragging = ref(false);
+const dragIndex = ref(-1);
+const targetIndex = ref(-1);
+const offsetY = ref(0);
+let startY = 0;
+let itemHeight = 0;
 
-// 切换参数预设时重新加载条目
+const entries = computed(() => store.entries);
+
+function getItemHeight() {
+  if (!listRef.value) return 49;
+  const first = listRef.value.children[0];
+  if (!first) return 49;
+  return first.getBoundingClientRect().height;
+}
+
+function getDragTransform(idx) {
+  if (!dragging.value) return "translateY(0)";
+  const di = dragIndex.value;
+  const ti = targetIndex.value;
+  if (di === -1) return "translateY(0)";
+
+  const h = itemHeight || getItemHeight();
+  if (idx === di) {
+    // 被拖拽项跟随鼠标
+    const ty = (ti - di) * h + offsetY.value;
+    return `translateY(${ty}px)`;
+  }
+  // 其他项挤压
+  if (di < ti && idx > di && idx <= ti) return `translateY(-${h}px)`;
+  if (di > ti && idx >= ti && idx < di) return `translateY(${h}px)`;
+  return "translateY(0)";
+}
+
+function onItemMouseDown(entry, event) {
+  if (event.button !== 0) return;
+
+  const idx = entries.value.findIndex((e) => e.id === entry.id);
+  if (idx === -1) return;
+
+  dragging.value = true;
+  dragIndex.value = idx;
+  targetIndex.value = idx;
+  offsetY.value = 0;
+  startY = event.clientY;
+  itemHeight = getItemHeight();
+
+  document.addEventListener("mousemove", onMouseMove);
+  document.addEventListener("mouseup", onMouseUp);
+}
+
+function onMouseMove(e) {
+  if (!dragging.value) return;
+
+  const h = itemHeight || getItemHeight();
+  const rect = listRef.value.getBoundingClientRect();
+  const relativeY = e.clientY - rect.top;
+  const n = entries.value.length;
+
+  let newTarget = Math.floor(relativeY / h);
+  newTarget = Math.max(0, Math.min(newTarget, n - 1));
+
+  offsetY.value = relativeY - dragIndex.value * h - h / 2;
+  targetIndex.value = newTarget;
+}
+
+function onMouseUp() {
+  if (!dragging.value) return;
+
+  document.removeEventListener("mousemove", onMouseMove);
+  document.removeEventListener("mouseup", onMouseUp);
+
+  const di = dragIndex.value;
+  const ti = targetIndex.value;
+
+  if (di !== ti && di >= 0 && ti >= 0) {
+    const data = [...store.entries];
+    const [moved] = data.splice(di, 1);
+    data.splice(ti, 0, moved);
+    store.reorderEntries(data.map((e) => e.id));
+  }
+
+  dragging.value = false;
+  dragIndex.value = -1;
+  targetIndex.value = -1;
+  offsetY.value = 0;
+}
+
+onBeforeUnmount(() => {
+  document.removeEventListener("mousemove", onMouseMove);
+  document.removeEventListener("mouseup", onMouseUp);
+});
+
+// ---- 预设切换 ----
 watch(
   () => paramStore.activePresetId,
   (newId) => {
@@ -71,7 +159,7 @@ watch(
   { immediate: true }
 );
 
-// 打开输入框时自动聚焦
+// ---- 输入框自动聚焦 ----
 watch(showAddInput, async (val) => {
   if (val) {
     await nextTick();
@@ -94,68 +182,6 @@ function cancelAdd() {
 
 async function handleToggle(entry) {
   await store.updateEntry(entry.id, { enabled: !entry.enabled });
-}
-
-function onDragStart(entry) {
-  draggedId.value = entry.id;
-}
-
-function onDragOver(id, position) {
-  overTargetId.value = id;
-  overPosition.value = position;
-}
-
-function getItemStyle(entry) {
-  if (!draggedId.value || !overTargetId.value) return {};
-  if (entry.id === draggedId.value) return {};
-
-  const entries = store.entries;
-  const dragIdx = entries.findIndex((e) => e.id === draggedId.value);
-  const overIdx = entries.findIndex((e) => e.id === overTargetId.value);
-  const entryIdx = entries.findIndex((e) => e.id === entry.id);
-  if (dragIdx === -1 || overIdx === -1) return {};
-  if (dragIdx === overIdx) return {};
-
-  const insertBefore = overPosition.value === "before";
-  const splitPoint = insertBefore ? overIdx : overIdx + 1;
-
-  if (dragIdx < splitPoint) {
-    // 源在上，目标在下
-    if (entryIdx > dragIdx && entryIdx < splitPoint) {
-      return { transform: `translateY(-${ITEM_HEIGHT}px)` };
-    }
-  } else {
-    // 源在下，目标在上
-    if (entryIdx >= splitPoint && entryIdx < dragIdx) {
-      return { transform: `translateY(${ITEM_HEIGHT}px)` };
-    }
-  }
-  return {};
-}
-
-function onDrop(draggedEntryId, targetId) {
-  const entries = [...store.entries];
-  const dragIdx = entries.findIndex((e) => e.id === draggedEntryId);
-  let targetIdx = entries.findIndex((e) => e.id === targetId);
-  if (dragIdx === -1 || targetIdx === -1 || dragIdx === targetIdx) {
-    resetDrag();
-    return;
-  }
-
-  const [moved] = entries.splice(dragIdx, 1);
-  // 重新计算 targetIdx（因为 splice 后索引可能变了）
-  targetIdx = entries.findIndex((e) => e.id === targetId);
-  let insertAt = targetIdx;
-  if (overPosition.value === "after") insertAt = targetIdx + 1;
-  entries.splice(insertAt, 0, moved);
-
-  resetDrag();
-  store.reorderEntries(entries.map((e) => e.id));
-}
-
-function resetDrag() {
-  draggedId.value = null;
-  overTargetId.value = null;
 }
 </script>
 
@@ -231,9 +257,5 @@ function resetDrag() {
   padding: 20px 0;
   color: var(--text-muted, #9ca3af);
   font-size: 13px;
-}
-
-.pe-list {
-  /* 条目容器 */
 }
 </style>

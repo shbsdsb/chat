@@ -1,14 +1,9 @@
 <template>
   <div
     class="pe-item"
-    :class="{ 'pe-item--dragging': isDragging }"
-    :draggable="true"
-    @dragstart="onDragStart"
-    @dragend="onDragEnd"
-    @dragover.prevent="onDragOver"
-    @drop.prevent="onDrop"
+    :class="{ 'pe-item--dragging': dragging }"
   >
-    <span class="pe-item__handle" title="拖拽排序">
+    <span class="pe-item__handle" title="拖拽排序" @mousedown.prevent="$emit('drag-start', $event)">
       <svg width="18" height="18" viewBox="0 0 100 100">
         <g stroke="currentColor" stroke-width="14" stroke-linecap="round" stroke-linejoin="round">
           <line x1="50" y1="16" x2="50" y2="84"/>
@@ -33,40 +28,14 @@
 </template>
 
 <script setup>
-import { ref } from "vue";
 import { Pencil } from "lucide-vue-next";
 
-const props = defineProps({
+defineProps({
   entry: { type: Object, required: true },
+  dragging: { type: Boolean, default: false },
 });
 
-const emit = defineEmits(["toggle", "edit", "drag-start", "drag-over", "drag-end", "drop"]);
-
-const isDragging = ref(false);
-
-function onDragStart(e) {
-  isDragging.value = true;
-  e.dataTransfer.effectAllowed = "move";
-  e.dataTransfer.setData("text/plain", props.entry.id);
-  emit("drag-start", props.entry);
-}
-
-function onDragEnd() {
-  isDragging.value = false;
-  emit("drag-end");
-}
-
-function onDragOver(e) {
-  e.dataTransfer.dropEffect = "move";
-  const rect = e.currentTarget.getBoundingClientRect();
-  const position = (e.clientY - rect.top) < rect.height / 2 ? "before" : "after";
-  emit("drag-over", props.entry.id, position);
-}
-
-function onDrop(e) {
-  const draggedId = e.dataTransfer.getData("text/plain");
-  emit("drop", draggedId, props.entry.id);
-}
+defineEmits(["toggle", "edit", "drag-start"]);
 </script>
 
 <style scoped>
@@ -75,14 +44,16 @@ function onDrop(e) {
   align-items: center;
   padding: 10px 0;
   border-bottom: 1px solid var(--border-light, #e5e7eb);
-  transition: transform 0.2s ease, opacity 0.2s ease;
+  transition: transform 0.22s cubic-bezier(0.34, 1.56, 0.64, 1), opacity 0.2s ease;
   user-select: none;
+  will-change: transform;
+  transform: translateY(0);
 }
 .pe-item:last-child {
   border-bottom: none;
 }
 .pe-item--dragging {
-  opacity: 0.5;
+  opacity: 0.35;
 }
 
 .pe-item__handle {
