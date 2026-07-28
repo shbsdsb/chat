@@ -31,9 +31,9 @@
     </div>
 
     <template #footer>
-      <button class="dialog-btn dialog-btn-cancel" @click="$emit('close')">✕ 取消</button>
-      <button class="dialog-btn dialog-btn-danger" @click="showDeleteConfirm = true">删除</button>
-      <button class="dialog-btn dialog-btn-ok" @click="handleSave">保存</button>
+      <button class="em-btn em-btn-cancel" @click="$emit('close')">✕ 取消</button>
+      <button class="em-btn em-btn-delete" @click="showDeleteConfirm = true">删除</button>
+      <button class="em-btn em-btn-save" @click="handleSave">保存</button>
     </template>
   </BaseDialog>
 
@@ -43,8 +43,8 @@
       <p class="dialog-danger-msg">确定要删除条目「{{ form.name }}」吗？此操作不可撤销。</p>
     </div>
     <template #footer>
-      <button class="dialog-btn dialog-btn-cancel" @click="showDeleteConfirm = false">取消</button>
-      <button class="dialog-btn dialog-btn-danger" @click="handleDelete">确定删除</button>
+      <button class="em-btn em-btn-cancel" @click="showDeleteConfirm = false">取消</button>
+      <button class="em-btn em-btn-delete" @click="handleDelete">确定删除</button>
     </template>
   </BaseDialog>
 </template>
@@ -153,5 +153,44 @@ function handleDelete() {
 .em-textarea:focus {
   border-color: var(--accent);
   box-shadow: var(--focus-ring);
+}
+
+/* 按钮 */
+.em-btn {
+  padding: 8px 18px;
+  border: none;
+  border-radius: var(--radius-sm);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  font-family: inherit;
+  transition: all 0.15s;
+}
+.em-btn-cancel {
+  background: var(--bg-input);
+  color: var(--text-secondary);
+  border: 1px solid var(--border-light);
+}
+.em-btn-cancel:hover {
+  background: var(--bg-input-hover);
+  color: var(--text-primary);
+}
+.em-btn-delete {
+  background: var(--danger-bg);
+  color: var(--danger);
+  border: 1px solid var(--danger);
+}
+.em-btn-delete:hover {
+  background: #fde8e8;
+}
+.em-btn-save {
+  background: var(--accent);
+  color: #fff;
+  box-shadow: 0 1px 3px rgba(79,110,246,0.2);
+}
+.em-btn-save:hover {
+  background: var(--accent-light);
+  transform: translateY(-1px);
+  box-shadow: 0 2px 6px rgba(79,110,246,0.3);
 }
 </style>
