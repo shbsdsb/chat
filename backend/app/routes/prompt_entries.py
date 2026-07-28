@@ -59,6 +59,10 @@ def update_prompt_entry(entry_id):
         updates["name"] = data["name"]
     if "enabled" in data:
         updates["enabled"] = data["enabled"]
+    if "content" in data:
+        updates["content"] = data["content"]
+    if "role" in data:
+        updates["role"] = data["role"]
     if not updates:
         return fail(400, "没有需要更新的字段")
     entry = update_entry(preset_id, entry_id, updates)

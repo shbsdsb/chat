@@ -25,7 +25,8 @@ def _conv_to_dict(row):
 
 
 def _stream_and_save(settings, messages, conv_id, cancel_event,
-                     temperature=None, max_tokens=None, top_p=None, request_body=None):
+                     temperature=None, max_tokens=None, top_p=None, request_body=None,
+                     user_msg_id=None):
     """Shared SSE generator: stream AI response, save assistant message, unregister."""
 
     full_content = ""
@@ -60,7 +61,8 @@ def _stream_and_save(settings, messages, conv_id, cancel_event,
                 yield f"data: {json.dumps({'delta': chunk['delta'], 'done': False})}\n\n"
             if chunk.get("done"):
                 final_usage = chunk.get("usage")
-                yield f"data: {json.dumps({'done': True})}\n\n"
+                done_data = {"done": True, "user_msg_id": user_msg_id, "assistant_msg_id": assistant_msg_id}
+                yield f"data: {json.dumps(done_data)}\n\n"
     finally:
         if full_content or full_reasoning:
             msg_data = {
@@ -182,7 +184,7 @@ def chat(conv_id):
     return Response(
         stream_with_context(_stream_and_save(settings, messages, conv_id, cancel_event,
                                              temperature=temperature, max_tokens=max_tokens, top_p=top_p,
-                                             request_body=body)),
+                                             request_body=body, user_msg_id=user_msg_id)),
         mimetype="text/event-stream",
         headers={
             "Cache-Control": "no-cache",

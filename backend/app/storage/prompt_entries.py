@@ -44,7 +44,7 @@ def create_entry(preset_id, name):
 
 
 def update_entry(preset_id, entry_id, data):
-    """更新条目字段（name / enabled）。"""
+    """更新条目字段。"""
     with _lock:
         entries = get_entries(preset_id)
         for entry in entries:
@@ -53,6 +53,10 @@ def update_entry(preset_id, entry_id, data):
                     entry["name"] = data["name"].strip()
                 if "enabled" in data:
                     entry["enabled"] = bool(data["enabled"])
+                if "content" in data:
+                    entry["content"] = data["content"]
+                if "role" in data:
+                    entry["role"] = data["role"]
                 _write_json(_get_file_path(preset_id), entries)
                 return entry
         return None
