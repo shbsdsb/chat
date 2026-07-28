@@ -32,8 +32,11 @@
         v-for="entry in store.entries"
         :key="entry.id"
         :entry="entry"
+        :style="getItemStyle(entry)"
         @toggle="handleToggle"
         @drag-start="onDragStart"
+        @drag-over="onDragOver"
+        @drag-end="resetDrag"
         @drop="onDrop"
       />
     </div>
@@ -53,6 +56,11 @@ const paramStore = useParamPresetsStore();
 const showAddInput = ref(false);
 const newName = ref("");
 const addInputRef = ref(null);
+const draggedId = ref(null);
+const overTargetId = ref(null);
+const overPosition = ref("after");
+
+const ITEM_HEIGHT = 49;
 
 // 切换参数预设时重新加载条目
 watch(
@@ -88,22 +96,66 @@ async function handleToggle(entry) {
   await store.updateEntry(entry.id, { enabled: !entry.enabled });
 }
 
-function onDragStart() {
-  // 拖拽开始 — 预留，后续可加视觉反馈
+function onDragStart(entry) {
+  draggedId.value = entry.id;
 }
 
-function onDrop(draggedId, targetId) {
+function onDragOver(id, position) {
+  overTargetId.value = id;
+  overPosition.value = position;
+}
+
+function getItemStyle(entry) {
+  if (!draggedId.value || !overTargetId.value) return {};
+  if (entry.id === draggedId.value) return {};
+
+  const entries = store.entries;
+  const dragIdx = entries.findIndex((e) => e.id === draggedId.value);
+  const overIdx = entries.findIndex((e) => e.id === overTargetId.value);
+  const entryIdx = entries.findIndex((e) => e.id === entry.id);
+  if (dragIdx === -1 || overIdx === -1) return {};
+  if (dragIdx === overIdx) return {};
+
+  const insertBefore = overPosition.value === "before";
+  const splitPoint = insertBefore ? overIdx : overIdx + 1;
+
+  if (dragIdx < splitPoint) {
+    // 源在上，目标在下
+    if (entryIdx > dragIdx && entryIdx < splitPoint) {
+      return { transform: `translateY(-${ITEM_HEIGHT}px)` };
+    }
+  } else {
+    // 源在下，目标在上
+    if (entryIdx >= splitPoint && entryIdx < dragIdx) {
+      return { transform: `translateY(${ITEM_HEIGHT}px)` };
+    }
+  }
+  return {};
+}
+
+function onDrop(draggedEntryId, targetId) {
   const entries = [...store.entries];
-  const draggedIdx = entries.findIndex((e) => e.id === draggedId);
-  const targetIdx = entries.findIndex((e) => e.id === targetId);
-  if (draggedIdx === -1 || targetIdx === -1 || draggedIdx === targetIdx) return;
+  const dragIdx = entries.findIndex((e) => e.id === draggedEntryId);
+  let targetIdx = entries.findIndex((e) => e.id === targetId);
+  if (dragIdx === -1 || targetIdx === -1 || dragIdx === targetIdx) {
+    resetDrag();
+    return;
+  }
 
-  // 移动条目
-  const [moved] = entries.splice(draggedIdx, 1);
-  entries.splice(targetIdx, 0, moved);
+  const [moved] = entries.splice(dragIdx, 1);
+  // 重新计算 targetIdx（因为 splice 后索引可能变了）
+  targetIdx = entries.findIndex((e) => e.id === targetId);
+  let insertAt = targetIdx;
+  if (overPosition.value === "after") insertAt = targetIdx + 1;
+  entries.splice(insertAt, 0, moved);
 
-  const ids = entries.map((e) => e.id);
-  store.reorderEntries(ids);
+  resetDrag();
+  store.reorderEntries(entries.map((e) => e.id));
+}
+
+function resetDrag() {
+  draggedId.value = null;
+  overTargetId.value = null;
 }
 </script>
 

@@ -40,7 +40,7 @@ const props = defineProps({
   entry: { type: Object, required: true },
 });
 
-const emit = defineEmits(["toggle", "edit", "drag-start", "drop"]);
+const emit = defineEmits(["toggle", "edit", "drag-start", "drag-over", "drag-end", "drop"]);
 
 const isDragging = ref(false);
 
@@ -53,23 +53,17 @@ function onDragStart(e) {
 
 function onDragEnd() {
   isDragging.value = false;
-  // 清理所有残留的 drop-target 指示线
-  document.querySelectorAll(".pe-item--drop-target").forEach((el) => {
-    el.classList.remove("pe-item--drop-target");
-  });
+  emit("drag-end");
 }
 
 function onDragOver(e) {
   e.dataTransfer.dropEffect = "move";
-  // 先清除所有指示线，再给当前添加
-  document.querySelectorAll(".pe-item--drop-target").forEach((el) => {
-    el.classList.remove("pe-item--drop-target");
-  });
-  e.currentTarget.classList.add("pe-item--drop-target");
+  const rect = e.currentTarget.getBoundingClientRect();
+  const position = (e.clientY - rect.top) < rect.height / 2 ? "before" : "after";
+  emit("drag-over", props.entry.id, position);
 }
 
 function onDrop(e) {
-  e.currentTarget.classList.remove("pe-item--drop-target");
   const draggedId = e.dataTransfer.getData("text/plain");
   emit("drop", draggedId, props.entry.id);
 }
@@ -81,14 +75,11 @@ function onDrop(e) {
   align-items: center;
   padding: 10px 0;
   border-bottom: 1px solid var(--border-light, #e5e7eb);
-  transition: background-color 0.15s;
+  transition: transform 0.2s ease, opacity 0.2s ease;
   user-select: none;
 }
 .pe-item:last-child {
   border-bottom: none;
-}
-.pe-item--drop-target {
-  border-top: 2px solid var(--color-accent, #4facfe);
 }
 .pe-item--dragging {
   opacity: 0.5;
