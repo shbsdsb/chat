@@ -146,6 +146,6 @@ defineEmits(["toggle", "edit", "drag-start"]);
   opacity: 0.8;
 }
 .pe-item--chat-history .pe-item__name::before {
-  content: "💬 ";
+  content: "[CH] ";
 }
 </style>

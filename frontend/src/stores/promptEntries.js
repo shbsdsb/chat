@@ -67,6 +67,11 @@ export const usePromptEntriesStore = defineStore("promptEntries", {
         ...idToEntry[id],
         order: i,
       }));
+      // 保留 __chat_history__ 占位符（不在 ids 中，需追加）
+      const chatHistory = this.entries.find(e => e.id === "__chat_history__");
+      if (chatHistory) {
+        reordered.push({ ...chatHistory, order: reordered.length });
+      }
       this.entries = reordered;
       // 后端同步
       await promptEntriesApi.reorderEntries(presetId, ids);
