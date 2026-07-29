@@ -1,0 +1,21 @@
+{
+  "id": "message-inspector",
+  "name": "Message Inspector",
+  "version": "1.0.0",
+  "description": "在终端打印发送给 AI 的完整 messages 数组",
+  "permissions": ["hook:chat"],
+  "ext_points": {
+    "backend": ["chat.pre_send"],
+    "frontend": ["panel"]
+  },
+  "min_app_version": "1.2.0",
+  "features": [
+    {
+      "id": "print_messages",
+      "label": "消息打印",
+      "description": "将发送给 AI 的完整 messages 数组以格式化 JSON 输出到后端终端",
+      "type": "boolean",
+      "default": true
+    }
+  ]
+}
