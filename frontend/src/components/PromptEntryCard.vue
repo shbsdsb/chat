@@ -57,6 +57,7 @@ import { List } from "lucide-vue-next";
 import { usePromptEntriesStore } from "@/stores/promptEntries";
 import { useParamPresetsStore } from "@/stores/paramPresets";
 import * as promptEntriesApi from "@/api/promptEntries";
+import * as paramPresetsApi from "@/api/paramPresets";
 import PromptEntryItem from "@/components/PromptEntryItem.vue";
 import PromptEntryModal from "@/components/PromptEntryModal.vue";
 
@@ -184,6 +185,18 @@ function onMouseUp() {
         .filter(e => e.id !== "__chat_history__")
         .map(e => e.id);
       promptEntriesApi.reorderEntries(presetId, realIds);
+
+      // 保存 chat_history 在列表中的位置到预设
+      const chatIdx = data.findIndex(e => e.id === "__chat_history__");
+      if (chatIdx !== -1) {
+        paramPresetsApi.update(presetId, {
+          name: paramStore.activePreset.name,
+          temperature: paramStore.activePreset.temperature,
+          max_tokens: paramStore.activePreset.max_tokens,
+          top_p: paramStore.activePreset.top_p,
+          chat_history_order: chatIdx,
+        }).catch(() => {});
+      }
     }
   }
 

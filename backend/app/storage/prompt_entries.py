@@ -25,17 +25,36 @@ def _read_real_entries(preset_id):
 
 
 def get_entries(preset_id):
-    """返回所有条目（含末尾自动追加的 __chat_history__ 占位符）。API 使用。"""
+    """返回所有条目（含 chat_history 占位符，按 chat_history_order 插入）。"""
     entries = _read_real_entries(preset_id)
+
+    # 从参数预设中读取 chat_history 的插入位置
+    from .param_presets import get_param_preset
+    preset = get_param_preset(preset_id)
+    chat_order = (preset or {}).get("chat_history_order")
+
+    if chat_order is not None:
+        chat_order = max(0, min(chat_order, len(entries)))
+    else:
+        chat_order = len(entries)  # 默认末尾
+
     chat_history = {
         "id": "__chat_history__",
         "name": "对话历史",
         "role": "system",
         "content": "",
         "enabled": True,
-        "order": len(entries),
+        "order": chat_order - 0.5,  # 插入到 chat_order 索引前
     }
-    return entries + [chat_history]
+
+    all_entries = entries + [chat_history]
+    all_entries.sort(key=lambda e: e.get("order", 0))
+
+    # 重新分配连续 order
+    for i, entry in enumerate(all_entries):
+        entry["order"] = i
+
+    return all_entries
 
 
 def create_entry(preset_id, name):

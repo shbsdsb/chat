@@ -128,3 +128,19 @@ def set_default_param_preset_route(preset_id):
 
     set_default_param_preset(preset_id)
     return ok(data={"is_default": True})
+
+
+@api_bp.route("/param-presets/<preset_id>/chat-history-order", methods=["PUT"])
+def update_chat_history_order(preset_id):
+    row = _get_or_404(preset_id)
+    if not row:
+        return fail(404, "参数预设不存在", request)
+
+    body = request.get_json(silent=True) or {}
+    try:
+        order = int(body.get("order", 0))
+    except (ValueError, TypeError):
+        return fail(400, "order 必须是整数", request)
+
+    update_param_preset(preset_id, {"chat_history_order": order})
+    return ok(data={"chat_history_order": order})
