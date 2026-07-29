@@ -184,6 +184,15 @@ def chat(conv_id):
     else:
         messages = get_messages_for_chat(conv_id)
 
+    # 扩展钩子：chat.pre_send
+    from app.extensions import get_extension_manager
+    mgr = get_extension_manager()
+    mgr.dispatcher.dispatch("chat.pre_send", {
+        "conversation_id": conv_id,
+        "messages": messages,
+        "settings": settings,
+    })
+
     cancel_event = sse_manager.register(conv_id)
 
     return Response(
@@ -249,6 +258,15 @@ def regenerate(conv_id):
         messages = assembled
     else:
         messages = get_messages_for_chat(conv_id)
+
+    # 扩展钩子：chat.pre_send
+    from app.extensions import get_extension_manager
+    mgr = get_extension_manager()
+    mgr.dispatcher.dispatch("chat.pre_send", {
+        "conversation_id": conv_id,
+        "messages": messages,
+        "settings": settings,
+    })
 
     cancel_event = sse_manager.register(conv_id)
 
