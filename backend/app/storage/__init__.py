@@ -34,18 +34,6 @@ from .settings import (
     set_default_setting,
 )
 
-from .param_presets import (
-    PARAM_PRESETS_FILE,
-    list_param_presets_raw,
-    get_param_preset,
-    create_param_preset,
-    update_param_preset,
-    delete_param_preset,
-    get_default_param_preset,
-    set_default_param_preset,
-    init_param_presets,
-)
-
 from .css_presets import (
     CSS_PRESETS_FILE,
     list_css_presets_raw,
@@ -58,12 +46,15 @@ from .css_presets import (
     init_css_presets,
 )
 
-# prompt_entries
-from .prompt_entries import (
+from .presets import (
+    PRESETS_DIR,
+    list_presets,
+    get_preset,
+    create_preset,
+    update_preset,
+    delete_preset,
+    get_default_preset,
+    set_default_preset,
+    init_presets,
     get_entries,
-    create_entry,
-    update_entry,
-    delete_entry,
-    reorder_entries,
-    delete_preset_entries,
 )
