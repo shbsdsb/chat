@@ -177,7 +177,12 @@ def chat(conv_id):
     # 更新用户消息时间（用于排序）
     update_conversation(conv_id, {"updated_at": now})
 
-    messages = get_messages_for_chat(conv_id)
+    # 优先使用前端组装的 messages，否则从存储读取
+    assembled = body.get("messages")
+    if assembled and isinstance(assembled, list) and len(assembled) > 0:
+        messages = assembled
+    else:
+        messages = get_messages_for_chat(conv_id)
 
     cancel_event = sse_manager.register(conv_id)
 
@@ -238,7 +243,12 @@ def regenerate(conv_id):
 
     delete_message(last_assistant_id, conv_id)
 
-    messages = get_messages_for_chat(conv_id)
+    # 优先使用前端组装的 messages，否则从存储读取
+    assembled = body.get("messages")
+    if assembled and isinstance(assembled, list) and len(assembled) > 0:
+        messages = assembled
+    else:
+        messages = get_messages_for_chat(conv_id)
 
     cancel_event = sse_manager.register(conv_id)
 
