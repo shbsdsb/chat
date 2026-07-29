@@ -171,7 +171,11 @@ function onMouseUp() {
     const data = [...store.entries];
     const [moved] = data.splice(di, 1);
     data.splice(ti, 0, moved);
-    store.reorderEntries(data.map((e) => e.id));
+    // 过滤掉 __chat_history__ 再发给后端
+    const realIds = data
+      .filter(e => e.id !== "__chat_history__")
+      .map(e => e.id);
+    store.reorderEntries(realIds);
   }
 
   // 下一帧恢复 transition
@@ -227,6 +231,8 @@ async function handleToggle(entry) {
 }
 
 function openEditModal(entry) {
+  // 防御：chat_history 不可编辑（编辑按钮已隐藏，兜底）
+  if (entry.id === "__chat_history__") return;
   editingEntry.value = { ...entry };
   showEditModal.value = true;
 }

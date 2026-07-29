@@ -1,7 +1,10 @@
 <template>
   <div
     class="pe-item"
-    :class="{ 'pe-item--dragging': dragging }"
+    :class="{
+      'pe-item--dragging': dragging,
+      'pe-item--chat-history': entry.id === '__chat_history__',
+    }"
   >
     <span class="pe-item__handle" title="拖拽排序" @mousedown.prevent="$emit('drag-start', $event)">
       <svg width="18" height="18" viewBox="0 0 100 100">
@@ -13,11 +16,17 @@
       </svg>
     </span>
     <span class="pe-item__name">{{ entry.name }}</span>
-    <span class="pe-item__token">-</span>
-    <button class="pe-item__edit" title="编辑" @click="$emit('edit', entry)">
+    <span class="pe-item__token">{{ entry.id === '__chat_history__' ? '' : '-' }}</span>
+    <button
+      v-if="entry.id !== '__chat_history__'"
+      class="pe-item__edit"
+      title="编辑"
+      @click="$emit('edit', entry)"
+    >
       <Pencil :size="14" />
     </button>
     <div
+      v-if="entry.id !== '__chat_history__'"
       class="pe-item__toggle toggle-switch"
       :class="{ active: entry.enabled }"
       @click="$emit('toggle', entry)"
@@ -128,5 +137,15 @@ defineEmits(["toggle", "edit", "drag-start"]);
 .toggle-switch.active .toggle-switch__slider {
   transform: translateX(16px);
   background-color: #fff;
+}
+
+/* chat_history 特殊条目 */
+.pe-item--chat-history {
+  color: var(--text-muted, #9ca3af);
+  font-style: italic;
+  opacity: 0.8;
+}
+.pe-item--chat-history .pe-item__name::before {
+  content: "💬 ";
 }
 </style>
