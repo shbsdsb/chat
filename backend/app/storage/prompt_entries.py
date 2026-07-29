@@ -13,8 +13,8 @@ def _ensure_dir():
     os.makedirs(PROMPT_ENTRIES_DIR, exist_ok=True)
 
 
-def get_entries(preset_id):
-    """返回指定预设的所有提示词条目，按 order 排序。文件不存在返回 []。"""
+def _read_real_entries(preset_id):
+    """读取真实条目（不含 __chat_history__），按 order 排序。内部使用。"""
     _ensure_dir()
     filepath = _get_file_path(preset_id)
     if not os.path.exists(filepath):
@@ -24,10 +24,24 @@ def get_entries(preset_id):
     return entries
 
 
+def get_entries(preset_id):
+    """返回所有条目（含末尾自动追加的 __chat_history__ 占位符）。API 使用。"""
+    entries = _read_real_entries(preset_id)
+    chat_history = {
+        "id": "__chat_history__",
+        "name": "对话历史",
+        "role": "system",
+        "content": "",
+        "enabled": True,
+        "order": len(entries),
+    }
+    return entries + [chat_history]
+
+
 def create_entry(preset_id, name):
     """创建新条目，order = 当前最大 + 1，enabled 默认 True。"""
     with _lock:
-        entries = get_entries(preset_id)
+        entries = _read_real_entries(preset_id)
         max_order = max((e.get("order", 0) for e in entries), default=-1)
         entry = {
             "id": str(uuid.uuid4()),
@@ -46,7 +60,7 @@ def create_entry(preset_id, name):
 def update_entry(preset_id, entry_id, data):
     """更新条目字段。"""
     with _lock:
-        entries = get_entries(preset_id)
+        entries = _read_real_entries(preset_id)
         for entry in entries:
             if entry["id"] == entry_id:
                 if "name" in data:
@@ -65,7 +79,7 @@ def update_entry(preset_id, entry_id, data):
 def delete_entry(preset_id, entry_id):
     """删除条目并重整 order 为连续值。"""
     with _lock:
-        entries = get_entries(preset_id)
+        entries = _read_real_entries(preset_id)
         entries = [e for e in entries if e["id"] != entry_id]
         for i, entry in enumerate(entries):
             entry["order"] = i
@@ -76,7 +90,7 @@ def delete_entry(preset_id, entry_id):
 def reorder_entries(preset_id, id_order_list):
     """按传入的 id 列表批量写入新 order。"""
     with _lock:
-        entries = get_entries(preset_id)
+        entries = _read_real_entries(preset_id)
         id_to_entry = {e["id"]: e for e in entries}
         for new_order, entry_id in enumerate(id_order_list):
             if entry_id in id_to_entry:

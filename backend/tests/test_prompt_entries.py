@@ -37,13 +37,21 @@ def _create_preset(test_app, name="测试预设"):
 
 class TestPromptEntriesCRUD:
     def test_list_empty(self, test_app):
-        """空列表返回 []。"""
+        """空列表返回仅含 chat_history 占位符。"""
         preset_id = _create_preset(test_app)
         resp = test_app.get(f"/api/prompt-entries?preset_id={preset_id}")
         assert resp.status_code == 200
         data = resp.get_json()
         assert data["code"] == 0
-        assert data["data"] == []
+        entries = data["data"]
+        # 过滤掉 __chat_history__，仅验证真实条目
+        real_entries = [e for e in entries if e["id"] != "__chat_history__"]
+        assert real_entries == []
+        # 验证占位符存在
+        chat = next((e for e in entries if e["id"] == "__chat_history__"), None)
+        assert chat is not None
+        assert chat["name"] == "对话历史"
+        assert chat["enabled"] is True
 
     def test_create_entry(self, test_app):
         """创建条目成功。"""
@@ -83,7 +91,7 @@ class TestPromptEntriesCRUD:
         assert resp.get_json()["code"] != 0
 
     def test_list_ordered(self, test_app):
-        """列表按 order 排序返回。"""
+        """列表按 order 排序返回（chat_history 在末尾）。"""
         preset_id = _create_preset(test_app)
         test_app.post("/api/prompt-entries", json={"preset_id": preset_id, "name": "B"})
         test_app.post("/api/prompt-entries", json={"preset_id": preset_id, "name": "A"})
@@ -91,7 +99,10 @@ class TestPromptEntriesCRUD:
 
         resp = test_app.get(f"/api/prompt-entries?preset_id={preset_id}")
         entries = resp.get_json()["data"]
-        names = [e["name"] for e in entries]
+        # 最后一个是 chat_history
+        assert entries[-1]["id"] == "__chat_history__"
+        real_entries = entries[:-1]
+        names = [e["name"] for e in real_entries]
         assert names == ["B", "A", "C"]
 
     def test_update_entry(self, test_app):
@@ -134,9 +145,11 @@ class TestPromptEntriesCRUD:
         assert resp.status_code == 200
         assert resp.get_json()["code"] == 0
 
-        # 验证已删除
+        # 验证已删除（只剩 chat_history）
         resp = test_app.get(f"/api/prompt-entries?preset_id={preset_id}")
-        assert resp.get_json()["data"] == []
+        entries = resp.get_json()["data"]
+        real_entries = [e for e in entries if e["id"] != "__chat_history__"]
+        assert real_entries == []
 
     def test_reorder(self, test_app):
         """批量排序。"""
@@ -154,10 +167,12 @@ class TestPromptEntriesCRUD:
         )
         assert resp.status_code == 200
 
-        # 验证顺序
+        # 验证顺序（末尾有 chat_history）
         resp = test_app.get(f"/api/prompt-entries?preset_id={preset_id}")
         entries = resp.get_json()["data"]
-        assert [e["id"] for e in entries] == reversed_ids
+        assert entries[-1]["id"] == "__chat_history__"
+        real_ids = [e["id"] for e in entries[:-1]]
+        assert real_ids == reversed_ids
 
     def test_cascade_delete_with_preset(self, test_app):
         """删除参数预设时联动清理提示词条目。"""
