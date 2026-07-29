@@ -56,6 +56,7 @@ import { ref, watch, nextTick, computed, onBeforeUnmount } from "vue";
 import { List } from "lucide-vue-next";
 import { usePromptEntriesStore } from "@/stores/promptEntries";
 import { useParamPresetsStore } from "@/stores/paramPresets";
+import * as promptEntriesApi from "@/api/promptEntries";
 import PromptEntryItem from "@/components/PromptEntryItem.vue";
 import PromptEntryModal from "@/components/PromptEntryModal.vue";
 
@@ -171,11 +172,19 @@ function onMouseUp() {
     const data = [...store.entries];
     const [moved] = data.splice(di, 1);
     data.splice(ti, 0, moved);
-    // 过滤掉 __chat_history__ 再发给后端
-    const realIds = data
-      .filter(e => e.id !== "__chat_history__")
-      .map(e => e.id);
-    store.reorderEntries(realIds);
+
+    // 重新分配 order（含 __chat_history__，保留其拖拽后的位置）
+    data.forEach((e, i) => { e.order = i; });
+    store.entries = data;
+
+    // 同步后端（不含 chat_history）
+    const presetId = paramStore.activePresetId;
+    if (presetId) {
+      const realIds = data
+        .filter(e => e.id !== "__chat_history__")
+        .map(e => e.id);
+      promptEntriesApi.reorderEntries(presetId, realIds);
+    }
   }
 
   // 下一帧恢复 transition
