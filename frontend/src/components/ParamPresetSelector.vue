@@ -116,7 +116,6 @@ async function handleCreate() {
   try {
     await store.createPreset(name, form.temperature, form.maxTokens, form.topP);
     showToast("预设已创建");
-    emit("saved");
   } catch (e) { alert.error("创建失败", e.message || "未知错误"); }
 }
 
