@@ -1,8 +1,7 @@
 import { defineStore } from "pinia";
 import * as conversationsApi from "@/api/conversations";
 import { sse } from "@/api/sse";
-import { useParamPresetsStore } from "@/stores/paramPresets";
-import { usePromptEntriesStore } from "@/stores/promptEntries";
+import { usePresetsStore } from "@/stores/presets";
 import { assembleMessages } from "@/composables/useMessageAssembler";
 
 const NEW_CONV = "__new__";
@@ -78,8 +77,7 @@ export const useChatStore = defineStore("chat", {
     async sendMessage(content) {
       if (this.isStreaming) return;
 
-      const paramPresetsStore = useParamPresetsStore();
-      const promptEntriesStore = usePromptEntriesStore();
+      const presetsStore = usePresetsStore();
 
       // 无活跃会话 → 视为新对话
       if (!this.activeConvId) {
@@ -117,7 +115,7 @@ export const useChatStore = defineStore("chat", {
         content: m.content,
       }));
       const assembledMessages = assembleMessages(
-        promptEntriesStore.entries,
+        presetsStore.entriesList,
         conversationMessages
       );
 
@@ -136,9 +134,9 @@ export const useChatStore = defineStore("chat", {
         body: JSON.stringify({
           content,
           messages: assembledMessages,
-          temperature: paramPresetsStore.temperature,
-          max_tokens: paramPresetsStore.maxTokens,
-          top_p: paramPresetsStore.topP,
+          temperature: presetsStore.temperature,
+          max_tokens: presetsStore.maxTokens,
+          top_p: presetsStore.topP,
         }),
         onMessage: (chunk) => {
           if (chunk.stopped) {
@@ -229,15 +227,14 @@ export const useChatStore = defineStore("chat", {
       const newContent = { value: "" };
       const newReasoning = { value: "" };
 
-      const paramPresetsStore = useParamPresetsStore();
-      const promptEntriesStore = usePromptEntriesStore();
+      const presetsStore = usePresetsStore();
 
       // ── 组装消息（排除正在重生成的 assistant 消息）──
       const conversationMessages = this.messages
         .filter(m => m.id !== id)
         .map(m => ({ role: m.role, content: m.content }));
       const assembledMessages = assembleMessages(
-        promptEntriesStore.entries,
+        presetsStore.entriesList,
         conversationMessages
       );
 
@@ -245,9 +242,9 @@ export const useChatStore = defineStore("chat", {
         method: "POST",
         body: JSON.stringify({
           messages: assembledMessages,
-          temperature: paramPresetsStore.temperature,
-          max_tokens: paramPresetsStore.maxTokens,
-          top_p: paramPresetsStore.topP,
+          temperature: presetsStore.temperature,
+          max_tokens: presetsStore.maxTokens,
+          top_p: presetsStore.topP,
         }),
         onMessage: (chunk) => {
           if (chunk.stopped) {

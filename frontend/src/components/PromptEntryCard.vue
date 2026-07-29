@@ -22,14 +22,14 @@
     </div>
 
     <!-- 空状态 -->
-    <div v-if="!store.loading && store.entries.length === 0 && !showAddInput" class="pe-empty">
+    <div v-if="!store.loading && entries.length === 0 && !showAddInput" class="pe-empty">
       暂无条目，点击 + 创建
     </div>
 
     <!-- 条目列表 -->
-    <div v-if="store.entries.length > 0" class="pe-list" ref="listRef">
+    <div v-if="entries.length > 0" class="pe-list" ref="listRef">
       <PromptEntryItem
-        v-for="(entry, idx) in store.entries"
+        v-for="(entry, idx) in entries"
         :key="entry.id"
         :entry="entry"
         :dragging="dragging && dragIndex === idx"
@@ -54,15 +54,11 @@
 <script setup>
 import { ref, watch, nextTick, computed, onBeforeUnmount } from "vue";
 import { List } from "lucide-vue-next";
-import { usePromptEntriesStore } from "@/stores/promptEntries";
-import { useParamPresetsStore } from "@/stores/paramPresets";
-import * as promptEntriesApi from "@/api/promptEntries";
-import * as paramPresetsApi from "@/api/paramPresets";
+import { usePresetsStore } from "@/stores/presets";
 import PromptEntryItem from "@/components/PromptEntryItem.vue";
 import PromptEntryModal from "@/components/PromptEntryModal.vue";
 
-const store = usePromptEntriesStore();
-const paramStore = useParamPresetsStore();
+const store = usePresetsStore();
 
 const showAddInput = ref(false);
 const newName = ref("");
@@ -81,7 +77,7 @@ const offsetY = ref(0);
 let startY = 0;
 let itemHeight = 0;
 
-const entries = computed(() => store.entries);
+const entries = computed(() => store.entriesList);
 
 function getItemHeight() {
   if (!listRef.value) return 49;
@@ -170,34 +166,14 @@ function onMouseUp() {
   offsetY.value = 0;
 
   if (di !== ti && di >= 0 && ti >= 0) {
-    const data = [...store.entries];
+    const data = [...store.entriesList];
     const [moved] = data.splice(di, 1);
     data.splice(ti, 0, moved);
 
     // 重新分配 order（含 __chat_history__，保留其拖拽后的位置）
     data.forEach((e, i) => { e.order = i; });
-    store.entries = data;
-
-    // 同步后端（不含 chat_history）
-    const presetId = paramStore.activePresetId;
-    if (presetId) {
-      const realIds = data
-        .filter(e => e.id !== "__chat_history__")
-        .map(e => e.id);
-      promptEntriesApi.reorderEntries(presetId, realIds);
-
-      // 保存 chat_history 在列表中的位置到预设
-      const chatIdx = data.findIndex(e => e.id === "__chat_history__");
-      if (chatIdx !== -1) {
-        paramPresetsApi.update(presetId, {
-          name: paramStore.activePreset.name,
-          temperature: paramStore.activePreset.temperature,
-          max_tokens: paramStore.activePreset.max_tokens,
-          top_p: paramStore.activePreset.top_p,
-          chat_history_order: chatIdx,
-        }).catch(() => {});
-      }
-    }
+    const orderedIds = data.map(e => e.id);
+    store.reorderEntries(orderedIds);
   }
 
   // 下一帧恢复 transition
@@ -220,9 +196,9 @@ onBeforeUnmount(() => {
 
 // ---- 预设切换 ----
 watch(
-  () => paramStore.activePresetId,
+  () => store.activePresetId,
   (newId) => {
-    store.loadEntries(newId);
+    if (newId) store.selectPreset(newId);
   },
   { immediate: true }
 );
@@ -238,7 +214,7 @@ watch(showAddInput, async (val) => {
 async function handleAdd() {
   const name = newName.value.trim();
   if (!name) return;
-  await store.createEntry(name);
+  store.addEntry(name);
   newName.value = "";
   showAddInput.value = false;
 }
@@ -249,7 +225,7 @@ function cancelAdd() {
 }
 
 async function handleToggle(entry) {
-  await store.updateEntry(entry.id, { enabled: !entry.enabled });
+  store.updateEntry(entry.id, { enabled: !entry.enabled });
 }
 
 function openEditModal(entry) {
@@ -260,12 +236,12 @@ function openEditModal(entry) {
 }
 
 async function handleEditSave({ name, content, role }) {
-  await store.updateEntry(editingEntry.value.id, { name, content, role });
+  store.updateEntry(editingEntry.value.id, { name, content, role });
   showEditModal.value = false;
 }
 
 async function handleEditDelete(id) {
-  await store.deleteEntry(id);
+  store.removeEntry(id);
   showEditModal.value = false;
 }
 </script>

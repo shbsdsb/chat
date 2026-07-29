@@ -70,13 +70,13 @@ import ExtensionManager from "@/components/ExtensionManager.vue";
 import ExtensionSlot from "@/extensions/ExtensionSlot.vue";
 import { Sidebar, Palette, SlidersHorizontal, Plug, Blocks } from "lucide-vue-next";
 import { useChatStore } from "@/stores/chat";
-import { useParamPresetsStore } from "@/stores/paramPresets";
+import { usePresetsStore } from "@/stores/presets";
 import { useCssPresetsStore } from "@/stores/cssPresets";
 import { useExtensionsStore } from "@/stores/extensions";
 import { useSettingsStore } from "@/stores/settings";
 
 const chatStore = useChatStore();
-const paramPresetsStore = useParamPresetsStore();
+const presetsStore = usePresetsStore();
 const cssPresetsStore = useCssPresetsStore();
 const extensionsStore = useExtensionsStore();
 const settingsStore = useSettingsStore();
@@ -94,7 +94,7 @@ function toggleDrawer(name) {
 
 onMounted(async () => {
   chatStore.loadConversations();
-  paramPresetsStore.loadPresets();
+  presetsStore.loadPresets();
   cssPresetsStore.loadPresets();
   extensionsStore.fetchExtensions();
 

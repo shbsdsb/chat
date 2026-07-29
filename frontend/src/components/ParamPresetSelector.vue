@@ -12,32 +12,29 @@
         <option v-for="p in store.presets" :key="p.id" :value="p.id">{{ p.name }}</option>
       </select>
       <button class="icon-btn" title="新建" @click="clearForm">+</button>
-      <button class="icon-btn danger" title="删除" @click="handleDelete" :disabled="!store.activePresetId">
+      <button class="icon-btn" title="保存" @click="handleSave" :disabled="!store.activePresetId">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
+      </button>
+      <button class="icon-btn danger" title="删除" @click="handleDelete" :disabled="!canDelete">
         <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
       </button>
     </div>
 
     <!-- 参数表单 -->
-    <div style="display:flex;flex-direction:column;gap:10px;margin-bottom:14px;">
+    <div style="display:flex;flex-direction:column;gap:10px;">
       <div>
         <span class="field-label">Temperature</span>
-        <input v-model.number="form.temperature" type="number" class="input-field" step="0.1" min="0" max="2" style="cursor:text;" />
+        <input v-model.number="form.temperature" type="number" class="input-field" step="0.1" min="0" max="2" />
       </div>
       <div>
         <span class="field-label">Max Tokens</span>
-        <input v-model.number="form.maxTokens" type="number" class="input-field" step="1" min="1" style="cursor:text;" />
+        <input v-model.number="form.maxTokens" type="number" class="input-field" step="1" min="1" />
       </div>
       <div>
         <span class="field-label">Top P</span>
-        <input v-model.number="form.topP" type="number" class="input-field" step="0.01" min="0" max="1" style="cursor:text;" />
+        <input v-model.number="form.topP" type="number" class="input-field" step="0.01" min="0" max="1" />
       </div>
     </div>
-
-    <!-- 保存按钮 -->
-    <button class="btn-save" @click="handleSave" :disabled="!store.activePresetId">
-      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
-      保存
-    </button>
 
     <!-- Toast -->
     <transition name="fade"><span v-if="toastMsg" class="pp-toast">{{ toastMsg }}</span></transition>
@@ -65,13 +62,13 @@
 </template>
 
 <script setup>
-import { ref, reactive, watch, nextTick } from "vue";
+import { ref, reactive, watch, nextTick, computed } from "vue";
 import { SlidersHorizontal } from "lucide-vue-next";
-import { useParamPresetsStore } from "@/stores/paramPresets";
+import { usePresetsStore } from "@/stores/presets";
 import { useAlertStore } from "@/stores/alert";
 import BaseDialog from "@/components/BaseDialog.vue";
 
-const store = useParamPresetsStore();
+const store = usePresetsStore();
 const alert = useAlertStore();
 const emit = defineEmits(["saved"]);
 
@@ -80,12 +77,24 @@ let toastTimer = null;
 
 const form = reactive({ temperature: 0.7, maxTokens: 4096, topP: 1.0 });
 
-watch(() => store.activePresetId, (id) => {
-  const p = store.presets.find((p) => p.id === id);
-  if (p) { form.temperature = p.temperature; form.maxTokens = p.max_tokens; form.topP = p.top_p; }
+const canDelete = computed(() => {
+  if (!store.activePresetId) return false;
+  const p = store.activePreset;
+  return p && !p.is_default;
 });
 
-function onSelect() {}
+watch(() => store.activePresetId, (id) => {
+  const p = store.presets.find((p) => p.id === id);
+  if (p) {
+    form.temperature = p.temperature !== undefined ? p.temperature : 0.7;
+    form.maxTokens = p.max_tokens !== undefined ? p.max_tokens : 4096;
+    form.topP = p.top_p !== undefined ? p.top_p : 1.0;
+  }
+});
+
+function onSelect() {
+  if (store.activePresetId) store.selectPreset(store.activePresetId);
+}
 
 const showNameDialog = ref(false);
 const dialogName = ref("");
@@ -113,7 +122,14 @@ function cancelNameDialog() { showNameDialog.value = false; dialogName.value = "
 
 async function handleSave() {
   if (!store.activePresetId) return;
-  try { await store.savePreset(form.temperature, form.maxTokens, form.topP); showToast("保存成功"); }
+  // 先写表单值到 store 索引
+  const p = store.presets.find((p) => p.id === store.activePresetId);
+  if (p) {
+    p.temperature = form.temperature;
+    p.max_tokens = form.maxTokens;
+    p.top_p = form.topP;
+  }
+  try { await store.savePreset(); showToast("保存成功"); }
   catch (e) { alert.error("保存失败", e.message || "未知错误"); }
 }
 
@@ -121,7 +137,7 @@ const showDeleteDialog = ref(false);
 const deletingPresetName = ref("");
 
 function handleDelete() {
-  const p = store.presets.find((p) => p.id === store.activePresetId);
+  const p = store.activePreset;
   deletingPresetName.value = p?.name || "未命名";
   showDeleteDialog.value = true;
 }
@@ -170,16 +186,6 @@ function showToast(msg) { toastMsg.value = msg; clearTimeout(toastTimer); toastT
 .icon-btn:hover:not(:disabled) { color: var(--text-primary); border-color: var(--border); background: var(--bg-input-hover); }
 .icon-btn.danger:hover:not(:disabled) { color: var(--danger); border-color: var(--danger); background: var(--danger-bg); }
 .icon-btn:disabled { opacity: 0.45; cursor: default; }
-
-.btn-save {
-  display: inline-flex; align-items: center; gap: 6px;
-  padding: 8px 18px; border: none; border-radius: var(--radius-sm);
-  background: var(--accent); color: #fff; font-size: 13px; font-weight: 600;
-  cursor: pointer; font-family: inherit;
-  box-shadow: 0 1px 3px rgba(79,110,246,0.2); transition: all 0.15s;
-}
-.btn-save:hover:not(:disabled) { background: var(--accent-light); transform: translateY(-1px); box-shadow: 0 2px 6px rgba(79,110,246,0.3); }
-.btn-save:disabled { opacity: 0.45; cursor: default; transform: none; box-shadow: none; }
 
 .pp-toast {
   position: absolute; top: -6px; left: 0;
