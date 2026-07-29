@@ -32,10 +32,9 @@ def create_app():
     import app.routes.example   # noqa — 必须在 register 前导入，注册 /api/hello
     import app.routes.settings      # noqa — 注册 /api/settings 系列路由
     import app.routes.conversations # noqa — 注册 /api/conversations 系列路由
-    import app.routes.param_presets  # noqa — 注册 /api/param-presets 系列路由
+    import app.routes.presets      # noqa — 注册 /api/presets 系列路由（含参数+条目）
     import app.routes.css_presets   # noqa — 注册 /api/css-presets 系列路由
     import app.routes.extensions   # noqa — 注册 /api/extensions 系列路由
-    import app.routes.prompt_entries  # noqa: F401 — 注册 /api/prompt-entries 系列路由
 
     # ── 扩展系统初始化（必须在 register_blueprint 之前，以便扩展注册 API 路由）──
     from app.extensions import get_extension_manager
@@ -47,10 +46,9 @@ def create_app():
     # ── 首次启动初始化 ──────────────────────────────
     os.makedirs(os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), "user_data", "logs"), exist_ok=True)
     init_storage()  # 初始化 JSON 存储（幂等）
-    from app.storage.param_presets import init_param_presets
+    from app.storage.presets import init_presets
     from app.storage.css_presets import init_css_presets
-    init_param_presets()  # 初始化参数预设存储（幂等）
-    os.makedirs(os.path.join(DATA_DIR, "prompt_entries"), exist_ok=True)
-    init_css_presets()    # 初始化CSS预设存储（幂等）
+    init_presets()       # 初始化预设存储（幂等，含默认参数预设+提示词条目）
+    init_css_presets()   # 初始化 CSS 预设存储（幂等）
 
     return flask_app
