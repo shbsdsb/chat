@@ -11,7 +11,10 @@
         <option :value="null" disabled>请选择预设</option>
         <option v-for="p in store.presets" :key="p.id" :value="p.id">{{ p.name }}</option>
       </select>
-      <button class="icon-btn" title="新建" @click="clearForm">+</button>
+      <button class="icon-btn" title="新建" @click="handleCreate">+</button>
+      <button class="icon-btn" title="重命名" @click="handleRename" :disabled="!store.activePresetId">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+      </button>
       <button class="icon-btn" title="保存" @click="handleSave" :disabled="!store.activePresetId">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
       </button>
@@ -51,7 +54,7 @@
     </BaseDialog>
 
     <!-- 命名弹窗 -->
-    <BaseDialog :visible="showNameDialog" title="新建预设" @close="cancelNameDialog">
+    <BaseDialog :visible="showNameDialog" :title="nameDialogMode === 'rename' ? '重命名' : '新预设命名'" @close="cancelNameDialog">
       <input ref="nameInput" v-model="dialogName" class="dialog-input" placeholder="输入预设名称" @keydown.enter="confirmNameDialog" />
       <template #footer>
         <button class="dialog-btn dialog-btn-cancel" @click="cancelNameDialog">取消</button>
@@ -98,32 +101,62 @@ function onSelect() {
 
 const showNameDialog = ref(false);
 const dialogName = ref("");
+const nameDialogMode = ref("new"); // "new" | "rename"
 const nameInput = ref(null);
 
-function clearForm() {
-  store.activePresetId = null;
-  form.temperature = 0.7; form.maxTokens = 4096; form.topP = 1.0;
+function getAutoName() {
   let base = "新预设", candidate = base, n = 1;
-  while (store.presets.some((p) => p.name === candidate)) { candidate = `${base} (${n})`; n++; }
-  dialogName.value = candidate;
-  showNameDialog.value = true;
-  nextTick(() => { nameInput.value?.focus(); nameInput.value?.select(); });
+  while (store.presets.some((p) => p.name === candidate)) { candidate = `${base}(${n})`; n++; }
+  return candidate;
+}
+
+async function handleCreate() {
+  const name = getAutoName();
+  form.temperature = 0.7; form.maxTokens = 4096; form.topP = 1.0;
+  try {
+    await store.createPreset(name, form.temperature, form.maxTokens, form.topP);
+    showToast("预设已创建");
+    emit("saved");
+  } catch (e) { alert.error("创建失败", e.message || "未知错误"); }
 }
 
 async function confirmNameDialog() {
   const name = dialogName.value.trim();
   if (!name) return;
   showNameDialog.value = false;
-  try { await store.createPreset(name, form.temperature, form.maxTokens, form.topP); showToast("预设已创建"); emit("saved"); }
-  catch (e) { alert.error("创建失败", e.message || "未知错误"); }
+  if (nameDialogMode.value === "rename") {
+    const p = store.presets.find((p) => p.id === store.activePresetId);
+    if (p) p.name = name;
+    try { await store.savePreset(); showToast("已重命名"); }
+    catch (e) { alert.error("重命名失败", e.message || "未知错误"); }
+  } else {
+    // 新建命名：更新名称 + 保存（预设已创建）
+    const p = store.presets.find((p) => p.id === store.activePresetId);
+    if (p) {
+      p.name = name;
+      p.temperature = form.temperature;
+      p.max_tokens = form.maxTokens;
+      p.top_p = form.topP;
+    }
+    try { await store.savePreset(); showToast("保存成功"); }
+    catch (e) { alert.error("保存失败", e.message || "未知错误"); }
+  }
 }
 
 function cancelNameDialog() { showNameDialog.value = false; dialogName.value = ""; }
 
 async function handleSave() {
   if (!store.activePresetId) return;
-  // 先写表单值到 store 索引
+  // 检查是否需要命名（预设名以"新预设"开头且尚未改名）
   const p = store.presets.find((p) => p.id === store.activePresetId);
+  if (p && /^新预设(\(\d+\))?$/.test(p.name || "")) {
+    dialogName.value = p.name;
+    nameDialogMode.value = "new";
+    showNameDialog.value = true;
+    nextTick(() => { nameInput.value?.focus(); nameInput.value?.select(); });
+    return;
+  }
+  // 先写表单值到 store 索引
   if (p) {
     p.temperature = form.temperature;
     p.max_tokens = form.maxTokens;
@@ -131,6 +164,15 @@ async function handleSave() {
   }
   try { await store.savePreset(); showToast("保存成功"); }
   catch (e) { alert.error("保存失败", e.message || "未知错误"); }
+}
+
+function handleRename() {
+  if (!store.activePresetId) return;
+  const p = store.activePreset;
+  dialogName.value = p?.name || "";
+  nameDialogMode.value = "rename";
+  showNameDialog.value = true;
+  nextTick(() => { nameInput.value?.focus(); nameInput.value?.select(); });
 }
 
 const showDeleteDialog = ref(false);
