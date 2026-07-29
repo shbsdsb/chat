@@ -2,6 +2,8 @@ import { defineStore } from "pinia";
 import * as conversationsApi from "@/api/conversations";
 import { sse } from "@/api/sse";
 import { useParamPresetsStore } from "@/stores/paramPresets";
+import { usePromptEntriesStore } from "@/stores/promptEntries";
+import { assembleMessages } from "@/composables/useMessageAssembler";
 
 const NEW_CONV = "__new__";
 
@@ -77,6 +79,7 @@ export const useChatStore = defineStore("chat", {
       if (this.isStreaming) return;
 
       const paramPresetsStore = useParamPresetsStore();
+      const promptEntriesStore = usePromptEntriesStore();
 
       // 无活跃会话 → 视为新对话
       if (!this.activeConvId) {
@@ -108,6 +111,16 @@ export const useChatStore = defineStore("chat", {
       };
       this.messages.push(userMsg);
 
+      // ── 组装消息 ──
+      const conversationMessages = this.messages.map(m => ({
+        role: m.role,
+        content: m.content,
+      }));
+      const assembledMessages = assembleMessages(
+        promptEntriesStore.entries,
+        conversationMessages
+      );
+
       const assistantMsg = {
         id: "temp-" + (Date.now() + 1),
         role: "assistant",
@@ -122,6 +135,7 @@ export const useChatStore = defineStore("chat", {
         method: "POST",
         body: JSON.stringify({
           content,
+          messages: assembledMessages,
           temperature: paramPresetsStore.temperature,
           max_tokens: paramPresetsStore.maxTokens,
           top_p: paramPresetsStore.topP,
@@ -137,6 +151,23 @@ export const useChatStore = defineStore("chat", {
           }
           if (chunk.done) {
             this.isStreaming = false;
+            // 将前端临时 ID 替换为后端分配的真实 UUID
+            if (chunk.user_msg_id) {
+              for (let i = this.messages.length - 1; i >= 0; i--) {
+                if (this.messages[i].role === "user") {
+                  this.messages[i].id = chunk.user_msg_id;
+                  break;
+                }
+              }
+            }
+            if (chunk.assistant_msg_id && last && last.role === "assistant") {
+              const oldId = last.id;
+              last.id = chunk.assistant_msg_id;
+              if (this.aiVersions[oldId]) {
+                this.aiVersions[chunk.assistant_msg_id] = this.aiVersions[oldId];
+                delete this.aiVersions[oldId];
+              }
+            }
           }
         },
         onError: (err) => {
@@ -182,24 +213,38 @@ export const useChatStore = defineStore("chat", {
       const assistantMsg = this.messages.find((m) => m.id === id && m.role === "assistant");
       if (!assistantMsg || this.isStreaming) return;
 
-      // 清空旧内容，避免逐字替换残留
-      assistantMsg.content = "";
-      assistantMsg.reasoning_content = "";
-
+      // 先保存旧内容到版本历史，再清空
       if (!this.aiVersions[id]) {
-        this.aiVersions[id] = [assistantMsg.content];
+        this.aiVersions[id] = [{
+          content: assistantMsg.content,
+          reasoning_content: assistantMsg.reasoning_content,
+        }];
         this.aiVersionIndex = 0;
       }
+
+      assistantMsg.content = "";
+      assistantMsg.reasoning_content = "";
 
       this.isStreaming = true;
       const newContent = { value: "" };
       const newReasoning = { value: "" };
 
       const paramPresetsStore = useParamPresetsStore();
+      const promptEntriesStore = usePromptEntriesStore();
+
+      // ── 组装消息（排除正在重生成的 assistant 消息）──
+      const conversationMessages = this.messages
+        .filter(m => m.id !== id)
+        .map(m => ({ role: m.role, content: m.content }));
+      const assembledMessages = assembleMessages(
+        promptEntriesStore.entries,
+        conversationMessages
+      );
 
       const es = sse(`/conversations/${this.activeConvId}/regenerate`, {
         method: "POST",
         body: JSON.stringify({
+          messages: assembledMessages,
           temperature: paramPresetsStore.temperature,
           max_tokens: paramPresetsStore.maxTokens,
           top_p: paramPresetsStore.topP,
@@ -219,7 +264,10 @@ export const useChatStore = defineStore("chat", {
           }
           if (chunk.done) {
             assistantMsg.reasoning_content = newReasoning.value;
-            this.aiVersions[id].push(newContent.value);
+            this.aiVersions[id].push({
+              content: newContent.value,
+              reasoning_content: newReasoning.value,
+            });
             this.aiVersionIndex = this.aiVersions[id].length - 1;
             this.isStreaming = false;
           }
@@ -246,7 +294,13 @@ export const useChatStore = defineStore("chat", {
       this.aiVersionIndex = newIdx;
       const msg = this.messages.find((m) => m.id === id);
       if (msg) {
-        msg.content = versions[newIdx];
+        const ver = versions[newIdx];
+        if (typeof ver === "object") {
+          msg.content = ver.content;
+          msg.reasoning_content = ver.reasoning_content;
+        } else {
+          msg.content = ver;
+        }
       }
     },
   },
